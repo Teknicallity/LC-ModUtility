@@ -33,6 +33,7 @@ func modifyFile(inputFilePath string) error {
 
 	// Create a scanner to read the input file line by line
 	scanner := bufio.NewScanner(file)
+
 	// Create a writer to write to the temporary file
 	writer := bufio.NewWriter(tempFile)
 
@@ -48,13 +49,13 @@ func modifyFile(inputFilePath string) error {
 			localVersion := strings.Split(modAndVersion, "-")[1]
 			remoteVersion := strings.Split(authorModVersion, "-")[1]
 			if remoteVersion > localVersion {
-				fmt.Printf("Updating: %s\n", modAndVersion)
-				err := downloadMod(downloadLink, modAndVersion)
+				fmt.Printf("Updating: %s -> %s\n", modAndVersion, remoteVersion)
+				err := downloadMod(downloadLink, authorModVersion)
 				if err != nil {
 					return err
 				}
 
-				line = fmt.Sprintf("- [%s](%s)", authorModVersion, modUrl)
+				line = fmt.Sprintf("- [%s](%s)", authorModVersion, modUrl) //proper
 			}
 		}
 		// Write the modified line to the temporary file

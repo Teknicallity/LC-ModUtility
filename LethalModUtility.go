@@ -27,8 +27,9 @@ func initialSelection() {
 	fmt.Println("Options")
 	fmt.Println("=============================")
 	fmt.Println("\t1. Update mods")
-	fmt.Println("\t2. Build pack")
-	fmt.Println("\t3. Download new mod")
+	fmt.Println("\t2. Unzip pack from downloads")
+	fmt.Println("\t2. Creating new compressed modpack")
+	fmt.Println("\t4. Download new mod")
 	fmt.Println("\tq. Quit")
 	fmt.Println()
 }
@@ -57,7 +58,7 @@ func main() {
 
 		case "2":
 			clearScreen()
-			fmt.Println("Selected 2: Building Pack")
+			fmt.Println("Selected 2: Unziping pack from downloads")
 			err := BuildPack()
 			if err != nil {
 				fmt.Println("Error:", err)
@@ -66,7 +67,16 @@ func main() {
 
 		case "3":
 			clearScreen()
-			fmt.Println("Selected 3: Downloading new mod")
+			fmt.Println("Selected 3: Create new compressed modpack")
+			err := ZipBepinEx()
+			if err != nil {
+				fmt.Println("Error:", err)
+				return
+			}
+
+		case "4":
+			clearScreen()
+			fmt.Println("Selected 4: Downloading new mod")
 			link, err := getModLink()
 			if err != nil {
 				fmt.Printf("could not intake new mod link %d\n", err)

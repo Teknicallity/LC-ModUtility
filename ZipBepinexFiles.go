@@ -85,7 +85,7 @@ func addToZip(archive *zip.Writer, filename string) error {
 	return nil
 }
 
-func main() {
+func ZipBepinEx() error {
 	//Files and directories to be zipped
 	files := []string{"winhttp.dll", "doorstop_config.ini", "BepInEx"}
 
@@ -93,32 +93,19 @@ func main() {
 	fmt.Printf("What version is this pack (1, 2, etc.): ")
 	_, err := fmt.Scanln(&num)
 	if err != nil {
-		fmt.Println("error read")
-		quit()
+		return fmt.Errorf("error reading: %e", err)
 	}
 	version, err := strconv.Atoi(num)
 	if err != nil {
-		fmt.Println("not an int")
-		quit()
+		return fmt.Errorf("not an int %e", err)
 	}
 
 	zipFileName := fmt.Sprintf("BepinExPack_v%d.zip", version)
-	fmt.Println(zipFileName)
 
 	// Create zip file
 	err = zipFiles(zipFileName, files)
 	if err != nil {
-		fmt.Println("Error zipping files:", err)
-		quit()
+		return fmt.Errorf("error zipping files: %e", err)
 	}
-
-	fmt.Println("Files zipped successfully.")
-	quit()
-}
-
-func quit() {
-	fmt.Printf("Press 'enter' to exit...")
-	b := make([]byte, 1)
-	os.Stdin.Read(b)
-	os.Exit(0)
+	return nil
 }
