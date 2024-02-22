@@ -249,7 +249,8 @@ func initialSelection() {
 	fmt.Println("Options")
 	fmt.Println("=============================")
 	fmt.Println("\t1. Update mods")
-	fmt.Println("\t2. Download new mod")
+	fmt.Println("\t2. Build pack")
+	fmt.Println("\t3. Download new mod")
 	fmt.Println("\tq. Quit")
 	fmt.Println()
 }
@@ -275,9 +276,19 @@ func main() {
 				return
 			}
 			fmt.Println("Checked All Mods")
+
 		case "2":
 			clearScreen()
-			fmt.Println("Selected 2: Downloading new mod")
+			fmt.Println("Selected 2: Building Pack")
+			err := BuildPack()
+			if err != nil {
+				fmt.Println("Error:", err)
+				return
+			}
+
+		case "3":
+			clearScreen()
+			fmt.Println("Selected 3: Downloading new mod")
 			link, err := getModLink()
 			if err != nil {
 				fmt.Printf("could not intake new mod link %d\n", err)
@@ -287,6 +298,7 @@ func main() {
 				fmt.Println("Error:", err)
 				return
 			}
+
 		case "q":
 			os.Exit(0)
 		default:
@@ -294,13 +306,6 @@ func main() {
 			fmt.Println("Could not understand selection")
 		}
 	}
-}
-
-func quit() {
-	fmt.Printf("Press 'enter' to exit...")
-	b := make([]byte, 1)
-	os.Stdin.Read(b)
-	os.Exit(0)
 }
 
 func clearScreen() {
