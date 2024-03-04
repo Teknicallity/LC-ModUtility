@@ -20,16 +20,26 @@ func modifyFile(inputFilePath string) error {
 	// Open the input file
 	file, err := os.Open(inputFilePath)
 	if err != nil {
-		return fmt.Errorf("error opening file: %w", err)
+		return fmt.Errorf("failed to open input file: %w", err)
 	}
-	defer file.Close()
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+
+		}
+	}(file)
 
 	// Create a temporary file
 	tempFile, err := os.CreateTemp("", "modified_*.txt")
 	if err != nil {
-		return fmt.Errorf("error creating temporary file: %w", err)
+		return fmt.Errorf("failed to create temporary file: %w", err)
 	}
-	defer tempFile.Close()
+	defer func(tempFile *os.File) {
+		err := tempFile.Close()
+		if err != nil {
+
+		}
+	}(tempFile)
 
 	// Create a scanner to read the input file line by line
 	scanner := bufio.NewScanner(file)
@@ -37,29 +47,22 @@ func modifyFile(inputFilePath string) error {
 	// Create a writer to write to the temporary file
 	writer := bufio.NewWriter(tempFile)
 
-	// Iterate over each line in the input file
+	// Iterate over each line in the modlist file
 	for scanner.Scan() {
-		line := scanner.Text()
+		oldLine := scanner.Text()
+		var newLine string
 
-		// Modify the line if it meets the condition
-		if strings.Contains(line, "-") {
-			modAndVersion, modUrl := parseModLine(line)
-			authorModVersion, downloadLink := scrapeWebsite(modUrl)
-
-			localVersion := strings.Split(modAndVersion, "-")[1]
-			remoteVersion := strings.Split(authorModVersion, "-")[1]
-			if remoteVersion > localVersion {
-				fmt.Printf("Updating: %s -> %s\n", modAndVersion, remoteVersion)
-				err := downloadMod(downloadLink, authorModVersion)
-				if err != nil {
-					return err
-				}
-
-				line = fmt.Sprintf("- [%s](%s)", authorModVersion, modUrl) //proper
+		// Modify the line if it is part of the modlist
+		if strings.Contains(oldLine, "-") {
+			newLine, err = processPluginsLine(oldLine)
+			if err != nil {
+				return err
 			}
+		} else { // if it is just the header or blank line, pass straight to new file
+			newLine = oldLine
 		}
 		// Write the modified line to the temporary file
-		_, err := writer.WriteString(line + "\n")
+		_, err := writer.WriteString(newLine + "\n")
 		if err != nil {
 			return fmt.Errorf("error writing to temporary file: %w", err)
 		}
@@ -91,19 +94,42 @@ func modifyFile(inputFilePath string) error {
 	return nil
 }
 
-func parseModLine(line string) (string, string) {
+func processPluginsLine(line string) (string, error) {
+	var newLine string
+	modAndVersion, modUrl := parsePluginsLine(line)
+	authorModVersion, downloadLink := scrapeWebsite(modUrl)
+
+	localVersionNumber := strings.Split(modAndVersion, "-")[1]
+	remoteVersionNumber := strings.Split(authorModVersion, "-")[1]
+	if remoteVersionNumber > localVersionNumber {
+		fmt.Printf("Updating: %s -> %s\n", modAndVersion, remoteVersionNumber)
+		err := downloadMod(downloadLink, authorModVersion)
+		if err != nil {
+			return "", err
+		}
+
+		newLine = fmt.Sprintf("- [%s](%s)", authorModVersion, modUrl) //proper
+	} else {
+		newLine = line
+	}
+	return newLine, nil
+}
+
+func parsePluginsLine(line string) (string, string) {
 	var modVersion, modUrl string
+
 	versionPattern := `\[(.*?)\]\(`
-	vRe := regexp.MustCompile(versionPattern)
-	vMatches := vRe.FindStringSubmatch(line)
-	if len(vMatches) >= 2 {
-		modVersion = vMatches[1]
+	versionRegx := regexp.MustCompile(versionPattern)
+	versionMatches := versionRegx.FindStringSubmatch(line)
+	if len(versionMatches) >= 2 {
+		modVersion = versionMatches[1]
 	} else {
 		fmt.Printf("ERR: No version pattern match found for %s\n", line)
 	}
+
 	urlPattern := `\]\((.*?)\)`
-	urlRe := regexp.MustCompile(urlPattern)
-	urlMatches := urlRe.FindStringSubmatch(line)
+	urlRegx := regexp.MustCompile(urlPattern)
+	urlMatches := urlRegx.FindStringSubmatch(line)
 	if len(urlMatches) >= 2 {
 		modUrl = urlMatches[1]
 		fmt.Println("\tChecking:", modUrl)
