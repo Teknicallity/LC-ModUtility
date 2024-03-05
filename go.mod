@@ -1,8 +1,12 @@
-module LethalModUtility
+module lethalModUtility
 
 go 1.22.0
 
-require github.com/gocolly/colly v1.2.0
+require (
+	github.com/fatih/color v1.16.0
+	github.com/gocolly/colly v1.2.0
+	github.com/inancgumus/screen v0.0.0-20190314163918-06e984b86ed3
+)
 
 require (
 	github.com/PuerkitoBio/goquery v1.8.1 // indirect
@@ -13,8 +17,9 @@ require (
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/inancgumus/screen v0.0.0-20190314163918-06e984b86ed3 // indirect
 	github.com/kennygrant/sanitize v1.2.4 // indirect
+	github.com/mattn/go-colorable v0.1.13 // indirect
+	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/saintfish/chardet v0.0.0-20230101081208-5e3ef4b5456d // indirect
 	github.com/temoto/robotstxt v1.1.2 // indirect
 	golang.org/x/crypto v0.19.0 // indirect

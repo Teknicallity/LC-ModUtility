@@ -2,7 +2,10 @@ package main
 
 import (
 	"fmt"
+	"github.com/fatih/color"
 	"github.com/inancgumus/screen"
+	"lethalModUtility/internal/modList"
+	"lethalModUtility/internal/zipUtil"
 	"os"
 	"path/filepath"
 )
@@ -23,12 +26,12 @@ func getModLink() (string, error) {
 	return url, nil
 }
 
-func initialSelection() {
+func printInitialSelection() {
 	fmt.Println("Options")
 	fmt.Println("=============================")
 	fmt.Println("\t1. Update mods")
 	fmt.Println("\t2. Unzip pack from downloads")
-	fmt.Println("\t2. Creating new compressed modpack")
+	fmt.Println("\t3. Creating new compressed modpack")
 	fmt.Println("\t4. Download new mod")
 	fmt.Println("\tq. Quit")
 	fmt.Println()
@@ -36,8 +39,25 @@ func initialSelection() {
 
 func main() {
 	clearScreen()
+	mods, err := modList.NewModList(".\\BepInEx\\plugins.md")
+	if err != nil {
+		fmt.Printf("Mod List Error: %d", err)
+	}
+
+	menu(mods)
+}
+
+func menu(m *modList.ModList) {
+	defer func(m *modList.ModList) {
+		err := m.WriteModsList()
+		if err != nil {
+
+		}
+	}(m)
+
+SelectionLoop:
 	for {
-		initialSelection()
+		printInitialSelection()
 		var selection string
 		fmt.Print("Please make selection by number: ")
 		_, err := fmt.Scanln(&selection)
@@ -49,30 +69,35 @@ func main() {
 		case "1":
 			clearScreen()
 			fmt.Println("Selected 1: Updating mods")
-			err := UpdateMods()
+			err := m.UpdateAllMods()
 			if err != nil {
 				fmt.Println("Error:", err)
 				return
 			}
-			fmt.Println("Checked All Mods")
+
+			successPrint("Checked All Mods")
 
 		case "2":
 			clearScreen()
 			fmt.Println("Selected 2: Unziping pack from downloads")
-			err := BuildPack()
+			err := zipUtil.BuildPack()
 			if err != nil {
 				fmt.Println("Error:", err)
 				return
 			}
 
+			successPrint()
+
 		case "3":
 			clearScreen()
 			fmt.Println("Selected 3: Create new compressed modpack")
-			err := ZipBepinEx()
+			err := zipUtil.ZipBepinEx()
 			if err != nil {
 				fmt.Println("Error:", err)
 				return
 			}
+
+			successPrint()
 
 		case "4":
 			clearScreen()
@@ -80,15 +105,20 @@ func main() {
 			link, err := getModLink()
 			if err != nil {
 				fmt.Printf("could not intake new mod link %d\n", err)
+				return
 			}
-			err = ScrapeDownloadMod(link)
+
+			err = m.AddMod(link)
 			if err != nil {
 				fmt.Println("Error:", err)
 				return
 			}
 
+			successPrint()
+
 		case "q":
-			os.Exit(0)
+			//os.Exit(0)
+			break SelectionLoop
 		default:
 			clearScreen()
 			fmt.Println("Could not understand selection")
@@ -99,4 +129,11 @@ func main() {
 func clearScreen() {
 	screen.Clear()
 	screen.MoveTopLeft()
+}
+
+func successPrint(message ...string) {
+	if len(message) == 0 {
+		message = append(message, "Success")
+	}
+	color.Green(message[0])
 }

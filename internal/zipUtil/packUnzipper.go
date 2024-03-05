@@ -1,9 +1,10 @@
-package main
+package zipUtil
 
 import (
 	"archive/zip"
 	"fmt"
 	"io/ioutil"
+	"lethalModUtility/internal/pathUtil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -103,8 +104,10 @@ func getBepinexPack(downloadsFolder string) string {
 func BuildPack() error {
 
 	checkAndDeleteBepinexRelated()
-	downloadsPath := getDownloadFolderPath()
+	downloadsPath := pathUtil.GetDownloadFolderPath()
 	bepinexPackZip := getBepinexPack(downloadsPath)
+	fmt.Println(downloadsPath)
+	fmt.Println(bepinexPackZip)
 
 	if bepinexPackZip == "" {
 		fmt.Println("ERROR: Cannot find BepinexPack zip file")
