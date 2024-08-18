@@ -42,8 +42,8 @@ func DownloadMod(downloadUrl string, outputFileName string) error {
 	return nil
 }
 
-func GetIdAndDownloadLink(url string) (string, string) {
-	var downloadLink, modAndVersion string
+func GetIdAndDownloadLink(url string) (RemoteInfo, error) {
+	var downloadLink, modAndVersion, lastUpdated string
 	// Create a new collector
 	c := colly.NewCollector()
 	c.OnError(func(_ *colly.Response, err error) {
@@ -82,11 +82,23 @@ func GetIdAndDownloadLink(url string) (string, string) {
 		}
 	})
 
+	c.OnHTML("table.table tr", func(e *colly.HTMLElement) {
+		// Find the <td> element with the text "Last updated"
+		if e.ChildText("td:first-child") == "Last updated" {
+			// Extract and print the value in the adjacent <td>
+			lastUpdated = e.ChildText("td:nth-child(2)")
+		}
+	})
+
 	// Visit the URL
 	err := c.Visit(url)
 	if err != nil {
-		return "", ""
+		return RemoteInfo{}, err
 	}
 
-	return modAndVersion, downloadLink
+	return RemoteInfo{
+		RemoteVersion: modAndVersion,
+		DownloadUrl:   downloadLink,
+		LastUpdated:   lastUpdated,
+	}, nil
 }

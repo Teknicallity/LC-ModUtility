@@ -12,6 +12,8 @@ type modEntry struct {
 	modUrl        string
 	remoteVersion string
 	downloadUrl   string
+	lastUpdated   string
+	remoteInfo    scraper.RemoteInfo
 }
 
 func newModEntryFromFileLine(line string) (modEntry, error) {
@@ -25,12 +27,15 @@ func newModEntryFromFileLine(line string) (modEntry, error) {
 
 func newModEntryFromUrl(modUrl string) (modEntry, error) {
 	mod := modEntry{}
-	remoteModAndVersion, downloadLink := scraper.GetIdAndDownloadLink(modUrl)
-	err := scraper.DownloadMod(downloadLink, remoteModAndVersion)
+	remoteInfo, err := scraper.GetIdAndDownloadLink(modUrl)
 	if err != nil {
 		return mod, err
 	}
-	mod.fillInfoFromModAndVersion(remoteModAndVersion)
+	err = scraper.DownloadMod(remoteInfo.RemoteVersion, remoteInfo.RemoteVersion)
+	if err != nil {
+		return mod, err
+	}
+	mod.fillInfoFromModAndVersion(remoteInfo.RemoteVersion)
 	mod.modUrl = modUrl
 
 	return mod, nil
@@ -71,16 +76,21 @@ func (m *modEntry) parsePluginsLine(line string) error {
 func (m *modEntry) fillRemoteVersionAndDownloadUrl() {
 	var remoteVersion string
 
-	remoteModAndVersion, downloadLink := scraper.GetIdAndDownloadLink(m.modUrl)
+	//remoteModAndVersion, downloadLink := scraper.GetIdAndDownloadLink(m.modUrl)
+	remoteInfo, err := scraper.GetIdAndDownloadLink(m.modUrl)
+	if err != nil {
+		return
+	}
 	versionPattern := `-([\d.]+)`
 	versionRegx := regexp.MustCompile(versionPattern)
-	remoteVersionMatches := versionRegx.FindStringSubmatch(remoteModAndVersion)
+	remoteVersionMatches := versionRegx.FindStringSubmatch(remoteInfo.RemoteVersion)
 	if len(remoteVersionMatches) >= 2 {
 		remoteVersion = remoteVersionMatches[1]
 	}
 
 	m.remoteVersion = remoteVersion
-	m.downloadUrl = downloadLink
+	m.downloadUrl = remoteInfo.DownloadUrl
+	m.remoteInfo = remoteInfo
 }
 
 func (m *modEntry) fillInfoFromModAndVersion(modAndVersion string) {

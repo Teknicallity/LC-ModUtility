@@ -78,13 +78,15 @@ func (m *ModList) UpdateAllMods() error {
 
 		m.mods[i].fillRemoteVersionAndDownloadUrl()
 		if m.mods[i].remoteVersion > m.mods[i].localVersion {
-			fmt.Printf("Updating: %s -> %s\t", m.mods[i].localVersion, m.mods[i].remoteVersion)
+			versionUpgrade := fmt.Sprintf("%s -> %s", m.mods[i].localVersion, m.mods[i].remoteVersion)
+			fmt.Printf("%-18s %s\t", versionUpgrade, m.mods[i].remoteInfo.LastUpdated)
 			modAndVersion, err := m.mods[i].downloadMod()
 			if err != nil {
 				return fmt.Errorf("could not download %s: %w\n", modAndVersion, err)
 			}
 		} else {
-			fmt.Println("Up to date.")
+			upToDate := fmt.Sprintf("Up to date.")
+			fmt.Printf("%-18s %s\n", upToDate, m.mods[i].remoteInfo.LastUpdated)
 		}
 	}
 
