@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/gocolly/colly"
 	"lethalModUtility/internal/pathUtil"
+	"lethalModUtility/internal/timeUtil"
 	"os"
 	"regexp"
 	"strings"
@@ -43,7 +44,7 @@ func DownloadMod(downloadUrl string, outputFileName string) error {
 }
 
 func GetRemoteInfoFromUrl(url string) (RemoteInfo, error) {
-	var downloadLink, modAndVersion, lastUpdated string
+	var downloadLink, modAndVersion, lastUpdatedHuman string
 	// Create a new collector
 	c := colly.NewCollector()
 	c.OnError(func(_ *colly.Response, err error) {
@@ -88,7 +89,7 @@ func GetRemoteInfoFromUrl(url string) (RemoteInfo, error) {
 		// Find the <td> element with the text "Last updated"
 		if e.ChildText("td:first-child") == "Last updated" {
 			// Extract and print the value in the adjacent <td>
-			lastUpdated = e.ChildText("td:nth-child(2)")
+			lastUpdatedHuman = e.ChildText("td:nth-child(2)")
 		}
 	})
 
@@ -104,9 +105,10 @@ func GetRemoteInfoFromUrl(url string) (RemoteInfo, error) {
 	}
 
 	return RemoteInfo{
-		ModVersion:  modVersion,
-		DownloadUrl: downloadLink,
-		LastUpdated: lastUpdated,
+		ModVersion:               modVersion,
+		DownloadUrl:              downloadLink,
+		LastUpdatedHumanReadable: lastUpdatedHuman,
+		LastUpdatedTime:          timeUtil.ParseTimeString(lastUpdatedHuman),
 	}, nil
 }
 

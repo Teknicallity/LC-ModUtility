@@ -2,8 +2,12 @@ package modList
 
 import (
 	"fmt"
+	"github.com/fatih/color"
 	"lethalModUtility/internal/scraper"
 	"regexp"
+	"slices"
+	"strings"
+	"time"
 )
 
 type modEntry struct {
@@ -116,14 +120,52 @@ func (m *modEntry) updateMod() error {
 	m.fillRemoteInfo()
 	if m.remoteInfo.ModVersion > m.localVersion {
 		versionUpgrade := fmt.Sprintf("%s -> %s", m.localVersion, m.remoteInfo.ModVersion)
-		fmt.Printf("%-18s %s\t", versionUpgrade, m.remoteInfo.LastUpdated)
+		fmt.Printf("%-18s ", versionUpgrade)
+		m.printLastUpdatedString()
 		modAndVersion, err := m.downloadMod()
 		if err != nil {
 			return fmt.Errorf("could not download %s: %w\n", modAndVersion, err)
 		}
 	} else {
 		upToDate := fmt.Sprintf("Up to date.")
-		fmt.Printf("%-18s %s", upToDate, m.remoteInfo.LastUpdated)
+		fmt.Printf("%-18s ", upToDate)
+		m.printLastUpdatedString()
 	}
 	return nil
+}
+
+func (m *modEntry) printLastUpdatedString() {
+	var c *color.Color
+	now := time.Now()
+
+	switch {
+	case m.remoteInfo.LastUpdatedTime.After(now.AddDate(0, 0, -1)):
+		c = color.New(color.FgHiCyan)
+	case m.remoteInfo.LastUpdatedTime.After(now.AddDate(0, 0, -8)):
+		c = color.New(color.FgCyan)
+	case m.remoteInfo.LastUpdatedTime.After(now.AddDate(0, -1, -1)):
+		c = color.New(color.FgHiBlue)
+	case m.remoteInfo.LastUpdatedTime.After(now.AddDate(0, -3, -1)):
+		c = color.New(color.FgHiGreen)
+	case m.remoteInfo.LastUpdatedTime.After(now.AddDate(0, -6, -1)):
+		c = color.New(color.FgHiYellow)
+	case m.remoteInfo.LastUpdatedTime.After(now.AddDate(-1, 0, -1)):
+		c = color.New(color.FgYellow)
+	case m.remoteInfo.LastUpdatedTime.After(now.AddDate(-2, 0, -1)):
+		c = color.New(color.FgHiRed)
+	default:
+		c = color.New(color.FgRed)
+	}
+
+	whitelist := []string{
+		"bepinex",
+	}
+	if slices.Contains(whitelist, strings.ToLower(m.modName)) {
+		c = color.New(color.FgHiBlack)
+	}
+
+	_, err := c.Printf("%-16s ", m.remoteInfo.LastUpdatedHumanReadable)
+	if err != nil {
+		return
+	}
 }

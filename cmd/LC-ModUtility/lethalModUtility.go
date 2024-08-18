@@ -6,15 +6,7 @@ import (
 	"github.com/inancgumus/screen"
 	"lethalModUtility/internal/modList"
 	"lethalModUtility/internal/zipUtil"
-	"os"
-	"path/filepath"
 )
-
-func getDownloadFolderPath() string {
-	userProfile := os.Getenv("USERPROFILE")
-	downloadsFolder := filepath.Join(userProfile, "Downloads")
-	return downloadsFolder
-}
 
 func getModLink() (string, error) {
 	var url string
