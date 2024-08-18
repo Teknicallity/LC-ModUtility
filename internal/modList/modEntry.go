@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/fatih/color"
 	"lethalModUtility/internal/scraper"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
@@ -35,7 +36,7 @@ func newModEntryFromUrl(modUrl string) (modEntry, error) {
 	if err != nil {
 		return mod, err
 	}
-	err = scraper.DownloadMod(remoteInfo.ModVersion, remoteInfo.ModVersion)
+	_, err = scraper.DownloadMod(remoteInfo.ModVersion, remoteInfo.ModVersion)
 	if err != nil {
 		return mod, err
 	}
@@ -105,15 +106,15 @@ func (m *modEntry) getMarkdownEntry() string {
 func (m *modEntry) downloadMod() (string, error) {
 	m.localVersion = m.remoteInfo.ModVersion
 	modAndVersion := fmt.Sprintf(m.modName + "-" + m.localVersion)
-	err := scraper.DownloadMod(m.remoteInfo.DownloadUrl, modAndVersion)
+	zipFilePath, err := scraper.DownloadMod(m.remoteInfo.DownloadUrl, modAndVersion)
 	if err != nil {
 		return "", err
 	}
 
-	return modAndVersion, nil
+	return zipFilePath, nil
 }
 
-func (m *modEntry) updateMod() error {
+func (m *modEntry) checkAndUpdateMod() (string, error) {
 	modNameString := fmt.Sprintf("%s:", m.modName)
 	fmt.Printf("%-25s ", modNameString)
 
@@ -122,16 +123,17 @@ func (m *modEntry) updateMod() error {
 		versionUpgrade := fmt.Sprintf("%s -> %s", m.localVersion, m.remoteInfo.ModVersion)
 		fmt.Printf("%-18s ", versionUpgrade)
 		m.printLastUpdatedString()
-		modAndVersion, err := m.downloadMod()
+		zipFilePath, err := m.downloadMod()
 		if err != nil {
-			return fmt.Errorf("could not download %s: %w\n", modAndVersion, err)
+			return "", fmt.Errorf("could not download %s: %w\n", filepath.Base(zipFilePath), err)
 		}
-	} else {
-		upToDate := fmt.Sprintf("Up to date.")
-		fmt.Printf("%-18s ", upToDate)
-		m.printLastUpdatedString()
+		return zipFilePath, nil
 	}
-	return nil
+	upToDate := fmt.Sprintf("Up to date.")
+	fmt.Printf("%-18s ", upToDate)
+	m.printLastUpdatedString()
+
+	return "", nil
 }
 
 func (m *modEntry) printLastUpdatedString() {

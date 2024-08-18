@@ -6,11 +6,15 @@ import (
 	"lethalModUtility/internal/pathUtil"
 	"lethalModUtility/internal/timeUtil"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
 
-func DownloadMod(downloadUrl string, outputFileName string) error {
+func DownloadMod(downloadUrl string, outputFileName string) (string, error) {
+	pathToDownload := filepath.Join(pathUtil.GetDownloadFolderPath(), "LC_New_Mods", "zips")
+	zipFilePath := filepath.Join(pathToDownload, outputFileName+".zip")
+
 	c := colly.NewCollector(colly.MaxBodySize(100 * 1024 * 1024))
 	c.OnError(func(_ *colly.Response, err error) {
 		fmt.Println("Something went wrong: ", err)
@@ -18,16 +22,14 @@ func DownloadMod(downloadUrl string, outputFileName string) error {
 
 	c.OnResponse(func(r *colly.Response) {
 		if strings.Contains(r.Headers.Get("Content-Type"), "application/zip") {
-			pathToDownload := pathUtil.GetDownloadFolderPath() + "\\LC_New_Mods\\"
 			if _, err := os.Stat(pathToDownload); os.IsNotExist(err) {
-				err = os.Mkdir(pathToDownload, 0644)
+				err = os.MkdirAll(pathToDownload, os.ModePerm)
 				if err != nil {
 					fmt.Println("cannot make new mod directory", err)
 					return
 				}
 			}
-
-			err := r.Save(pathToDownload + outputFileName + ".zip")
+			err := r.Save(zipFilePath)
 			if err != nil {
 				fmt.Println("Download zip file error:", err)
 				return
@@ -38,9 +40,9 @@ func DownloadMod(downloadUrl string, outputFileName string) error {
 
 	err := c.Visit(downloadUrl)
 	if err != nil {
-		return err
+		return "", err
 	}
-	return nil
+	return zipFilePath, nil
 }
 
 func GetRemoteInfoFromUrl(url string) (RemoteInfo, error) {
