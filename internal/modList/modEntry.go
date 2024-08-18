@@ -7,18 +7,18 @@ import (
 )
 
 type modEntry struct {
-	modName       string
-	localVersion  string
-	modUrl        string
-	remoteVersion string
-	downloadUrl   string
-	lastUpdated   string
-	remoteInfo    scraper.RemoteInfo
+	modName      string
+	localVersion string
+	modUrl       string
+	//remoteVersion string
+	//downloadUrl   string
+	//lastUpdated   string
+	remoteInfo scraper.RemoteInfo
 }
 
 func newModEntryFromFileLine(line string) (modEntry, error) {
 	mod := modEntry{}
-	err := mod.parsePluginsLine(line)
+	err := mod.parsePluginsMdLine(line)
 	if err != nil {
 		return modEntry{}, err
 	}
@@ -27,21 +27,21 @@ func newModEntryFromFileLine(line string) (modEntry, error) {
 
 func newModEntryFromUrl(modUrl string) (modEntry, error) {
 	mod := modEntry{}
-	remoteInfo, err := scraper.GetIdAndDownloadLink(modUrl)
+	remoteInfo, err := scraper.GetRemoteInfoFromUrl(modUrl)
 	if err != nil {
 		return mod, err
 	}
-	err = scraper.DownloadMod(remoteInfo.RemoteVersion, remoteInfo.RemoteVersion)
+	err = scraper.DownloadMod(remoteInfo.ModVersion, remoteInfo.ModVersion)
 	if err != nil {
 		return mod, err
 	}
-	mod.fillInfoFromModAndVersion(remoteInfo.RemoteVersion)
+	mod.fillInfoFromModAndVersion(remoteInfo.ModVersion)
 	mod.modUrl = modUrl
 
 	return mod, nil
 }
 
-func (m *modEntry) parsePluginsLine(line string) error {
+func (m *modEntry) parsePluginsMdLine(line string) error {
 	var mod, version, modUrl string
 
 	//versionPattern := `\[(.*?)\]\(`
@@ -73,23 +73,14 @@ func (m *modEntry) parsePluginsLine(line string) error {
 	return nil
 }
 
-func (m *modEntry) fillRemoteVersionAndDownloadUrl() {
-	var remoteVersion string
+func (m *modEntry) fillRemoteInfo() {
 
-	//remoteModAndVersion, downloadLink := scraper.GetIdAndDownloadLink(m.modUrl)
-	remoteInfo, err := scraper.GetIdAndDownloadLink(m.modUrl)
+	//remoteModAndVersion, downloadLink := scraper.GetRemoteInfoFromUrl(m.modUrl)
+	remoteInfo, err := scraper.GetRemoteInfoFromUrl(m.modUrl)
 	if err != nil {
 		return
 	}
-	versionPattern := `-([\d.]+)`
-	versionRegx := regexp.MustCompile(versionPattern)
-	remoteVersionMatches := versionRegx.FindStringSubmatch(remoteInfo.RemoteVersion)
-	if len(remoteVersionMatches) >= 2 {
-		remoteVersion = remoteVersionMatches[1]
-	}
 
-	m.remoteVersion = remoteVersion
-	m.downloadUrl = remoteInfo.DownloadUrl
 	m.remoteInfo = remoteInfo
 }
 
@@ -108,12 +99,31 @@ func (m *modEntry) getMarkdownEntry() string {
 }
 
 func (m *modEntry) downloadMod() (string, error) {
-	m.localVersion = m.remoteVersion
+	m.localVersion = m.remoteInfo.ModVersion
 	modAndVersion := fmt.Sprintf(m.modName + "-" + m.localVersion)
-	err := scraper.DownloadMod(m.downloadUrl, modAndVersion)
+	err := scraper.DownloadMod(m.remoteInfo.DownloadUrl, modAndVersion)
 	if err != nil {
 		return "", err
 	}
 
 	return modAndVersion, nil
+}
+
+func (m *modEntry) updateMod() error {
+	modNameString := fmt.Sprintf("%s:", m.modName)
+	fmt.Printf("%-25s ", modNameString)
+
+	m.fillRemoteInfo()
+	if m.remoteInfo.ModVersion > m.localVersion {
+		versionUpgrade := fmt.Sprintf("%s -> %s", m.localVersion, m.remoteInfo.ModVersion)
+		fmt.Printf("%-18s %s\t", versionUpgrade, m.remoteInfo.LastUpdated)
+		modAndVersion, err := m.downloadMod()
+		if err != nil {
+			return fmt.Errorf("could not download %s: %w\n", modAndVersion, err)
+		}
+	} else {
+		upToDate := fmt.Sprintf("Up to date.")
+		fmt.Printf("%-18s %s", upToDate, m.remoteInfo.LastUpdated)
+	}
+	return nil
 }

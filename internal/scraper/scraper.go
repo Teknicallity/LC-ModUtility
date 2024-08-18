@@ -31,7 +31,7 @@ func DownloadMod(downloadUrl string, outputFileName string) error {
 				fmt.Println("Download zip file error:", err)
 				return
 			}
-			fmt.Println("Zip file downloaded successfully.")
+			fmt.Printf("Zip file downloaded successfully.")
 		}
 	})
 
@@ -42,7 +42,7 @@ func DownloadMod(downloadUrl string, outputFileName string) error {
 	return nil
 }
 
-func GetIdAndDownloadLink(url string) (RemoteInfo, error) {
+func GetRemoteInfoFromUrl(url string) (RemoteInfo, error) {
 	var downloadLink, modAndVersion, lastUpdated string
 	// Create a new collector
 	c := colly.NewCollector()
@@ -53,7 +53,7 @@ func GetIdAndDownloadLink(url string) (RemoteInfo, error) {
 		//fmt.Println("Visiting", r.URL.String())
 	})
 
-	// Set up event handlers
+	// Get most recent version
 	c.OnHTML("meta[content]", func(e *colly.HTMLElement) {
 		metaContent := e.Attr("content")
 		if strings.Contains(metaContent, "https://gcdn.thunderstore.io/live/repository/icons/") {
@@ -75,6 +75,7 @@ func GetIdAndDownloadLink(url string) (RemoteInfo, error) {
 		}
 	})
 
+	// Get full zip download link
 	c.OnHTML("a[href]", func(e *colly.HTMLElement) {
 		link := e.Attr("href")
 		if strings.Contains(link, "https://thunderstore.io/package/download/") {
@@ -82,6 +83,7 @@ func GetIdAndDownloadLink(url string) (RemoteInfo, error) {
 		}
 	})
 
+	// Get last update time string
 	c.OnHTML("table.table tr", func(e *colly.HTMLElement) {
 		// Find the <td> element with the text "Last updated"
 		if e.ChildText("td:first-child") == "Last updated" {
@@ -96,9 +98,24 @@ func GetIdAndDownloadLink(url string) (RemoteInfo, error) {
 		return RemoteInfo{}, err
 	}
 
+	modVersion, err := parseVersionFromNameWithVersion(modAndVersion)
+	if err != nil {
+		return RemoteInfo{}, err
+	}
+
 	return RemoteInfo{
-		RemoteVersion: modAndVersion,
-		DownloadUrl:   downloadLink,
-		LastUpdated:   lastUpdated,
+		ModVersion:  modVersion,
+		DownloadUrl: downloadLink,
+		LastUpdated: lastUpdated,
 	}, nil
+}
+
+func parseVersionFromNameWithVersion(nameWithVersion string) (string, error) {
+	versionPattern := `-([\d.]+)`
+	versionRegx := regexp.MustCompile(versionPattern)
+	remoteVersionMatches := versionRegx.FindStringSubmatch(nameWithVersion)
+	if len(remoteVersionMatches) >= 2 {
+		return remoteVersionMatches[1], nil
+	}
+	return "", fmt.Errorf("could not parse mod name with version: %s", nameWithVersion)
 }

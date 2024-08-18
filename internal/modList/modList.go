@@ -70,24 +70,18 @@ func (m *ModList) AddMod(modUrl string) error {
 
 func (m *ModList) UpdateAllMods() error {
 	listLength := len(m.mods)
+	fmt.Printf("%-9s %-25s %-18s %-18s %s\n", "Queue", "Mod Name", "Status", "Last Updated", "Action")
 
-	for i := range m.mods {
+	for i, mod := range m.mods {
 		sequence := fmt.Sprintf("[%d/%d]", i+1, listLength)
-		modNameString := fmt.Sprintf("%s:", m.mods[i].modName)
-		fmt.Printf("%-9s %-25s ", sequence, modNameString)
+		fmt.Printf("%-9s ", sequence)
 
-		m.mods[i].fillRemoteVersionAndDownloadUrl()
-		if m.mods[i].remoteVersion > m.mods[i].localVersion {
-			versionUpgrade := fmt.Sprintf("%s -> %s", m.mods[i].localVersion, m.mods[i].remoteVersion)
-			fmt.Printf("%-18s %s\t", versionUpgrade, m.mods[i].remoteInfo.LastUpdated)
-			modAndVersion, err := m.mods[i].downloadMod()
-			if err != nil {
-				return fmt.Errorf("could not download %s: %w\n", modAndVersion, err)
-			}
-		} else {
-			upToDate := fmt.Sprintf("Up to date.")
-			fmt.Printf("%-18s %s\n", upToDate, m.mods[i].remoteInfo.LastUpdated)
+		err := mod.updateMod()
+		if err != nil {
+			return err
 		}
+
+		fmt.Println()
 	}
 
 	return nil
