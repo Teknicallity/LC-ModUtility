@@ -13,6 +13,8 @@ import (
 )
 
 func DownloadMod(downloadUrl string, outputFileName string) (string, error) {
+	fmt.Println("downloadURL:", downloadUrl)
+	fmt.Println("outputFileName:", outputFileName)
 	pathToDownload := filepath.Join(pathUtil.GetDownloadFolderPath(), "LC_New_Mods", "zips")
 	zipFilePath := filepath.Join(pathToDownload, outputFileName+".zip")
 
@@ -51,7 +53,7 @@ func DownloadMod(downloadUrl string, outputFileName string) (string, error) {
 }
 
 func GetRemoteInfoFromUrl(url string) (RemoteInfo, error) {
-	var downloadLink, modAndVersion, lastUpdatedHuman string
+	var downloadLink, modNameWithVersion, lastUpdatedHuman string
 	// Create a new collector
 	c := colly.NewCollector()
 	c.OnError(func(_ *colly.Response, err error) {
@@ -76,7 +78,7 @@ func GetRemoteInfoFromUrl(url string) (RemoteInfo, error) {
 			// 4 5 mod version
 
 			if len(matches) >= 2 {
-				modAndVersion = matches[3]
+				modNameWithVersion = matches[3]
 			} else {
 				fmt.Printf("ERR: No match found for %s\n", metaContent)
 			}
@@ -106,7 +108,7 @@ func GetRemoteInfoFromUrl(url string) (RemoteInfo, error) {
 		return RemoteInfo{}, err
 	}
 
-	modVersion, err := parseVersionFromNameWithVersion(modAndVersion)
+	modVersion, err := parseVersionFromNameWithVersion(modNameWithVersion)
 	if err != nil {
 		return RemoteInfo{}, err
 	}
@@ -116,6 +118,7 @@ func GetRemoteInfoFromUrl(url string) (RemoteInfo, error) {
 		DownloadUrl:              downloadLink,
 		LastUpdatedHumanReadable: lastUpdatedHuman,
 		LastUpdatedTime:          timeUtil.ParseTimeString(lastUpdatedHuman),
+		ModNameWithVersion:       modNameWithVersion,
 	}, nil
 }
 

@@ -7,4 +7,5 @@ type RemoteInfo struct {
 	DownloadUrl              string
 	LastUpdatedHumanReadable string
 	LastUpdatedTime          time.Time
+	ModNameWithVersion       string
 }

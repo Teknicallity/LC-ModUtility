@@ -107,6 +107,7 @@ SelectionLoop:
 				return
 			}
 
+			fmt.Println()
 			successPrint()
 
 		case "q":

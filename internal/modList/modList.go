@@ -6,6 +6,7 @@ import (
 	"github.com/fatih/color"
 	"lethalModUtility/internal/modInstaller"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -48,7 +49,7 @@ func (m *ModList) readModsMarkdownFile(modsListFilePath string) error {
 	for scanner.Scan() {
 		line := scanner.Text()
 		if strings.Contains(line, "-") {
-			modEntry, err := newModEntryFromFileLine(line)
+			modEntry, err := newModEntryFromPluginsMdLine(line)
 			if err != nil {
 				return err
 			}
@@ -64,6 +65,18 @@ func (m *ModList) AddMod(modUrl string) error {
 	mod, err := newModEntryFromUrl(modUrl)
 	if err != nil {
 		return err
+	}
+
+	zipFilePath, err := mod.downloadMod()
+	if err != nil {
+		return fmt.Errorf("could not download %s: %w\n", filepath.Base(zipFilePath), err)
+	}
+
+	if zipFilePath != "" {
+		err = modInstaller.InstallMod(zipFilePath)
+		if err != nil {
+			return err
+		}
 	}
 
 	m.mods = append(m.mods, mod)

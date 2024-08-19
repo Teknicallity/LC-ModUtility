@@ -21,7 +21,7 @@ type modEntry struct {
 	remoteInfo scraper.RemoteInfo
 }
 
-func newModEntryFromFileLine(line string) (modEntry, error) {
+func newModEntryFromPluginsMdLine(line string) (modEntry, error) {
 	mod := modEntry{}
 	err := mod.parsePluginsMdLine(line)
 	if err != nil {
@@ -36,12 +36,9 @@ func newModEntryFromUrl(modUrl string) (modEntry, error) {
 	if err != nil {
 		return mod, err
 	}
-	_, err = scraper.DownloadMod(remoteInfo.ModVersion, remoteInfo.ModVersion)
-	if err != nil {
-		return mod, err
-	}
-	mod.fillInfoFromModAndVersion(remoteInfo.ModVersion)
+	mod.fillInfoFromModAndVersion(remoteInfo.ModNameWithVersion)
 	mod.modUrl = modUrl
+	mod.remoteInfo = remoteInfo
 
 	return mod, nil
 }
@@ -105,8 +102,8 @@ func (m *modEntry) getMarkdownEntry() string {
 
 func (m *modEntry) downloadMod() (string, error) {
 	m.localVersion = m.remoteInfo.ModVersion
-	modAndVersion := fmt.Sprintf(m.modName + "-" + m.localVersion)
-	zipFilePath, err := scraper.DownloadMod(m.remoteInfo.DownloadUrl, modAndVersion)
+	modNameWithVersion := fmt.Sprintf(m.modName + "-" + m.localVersion)
+	zipFilePath, err := scraper.DownloadMod(m.remoteInfo.DownloadUrl, modNameWithVersion)
 	if err != nil {
 		return "", err
 	}
