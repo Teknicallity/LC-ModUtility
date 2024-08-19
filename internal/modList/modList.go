@@ -3,6 +3,7 @@ package modList
 import (
 	"bufio"
 	"fmt"
+	"github.com/fatih/color"
 	"lethalModUtility/internal/modInstaller"
 	"os"
 	"strings"
@@ -74,10 +75,10 @@ func (m *ModList) UpdateAllMods() error {
 	listLength := len(m.mods)
 	fmt.Printf("%-9s %-25s %-18s %-18s %s\n", "Queue", "Mod Name", "Status", "Last Updated", "Action")
 
-	for i, mod := range m.mods {
+	for i := range m.mods {
 		sequence := fmt.Sprintf("[%d/%d]", i+1, listLength)
 		fmt.Printf("%-9s ", sequence)
-		zipFilePath, err := mod.checkAndUpdateMod()
+		zipFilePath, err := m.mods[i].checkAndUpdateMod()
 		if err != nil {
 			return err
 		}
@@ -88,11 +89,6 @@ func (m *ModList) UpdateAllMods() error {
 				return err
 			}
 		}
-
-		if zipFilePath != "" {
-			m.updatedMods = append(m.updatedMods, mod.modName)
-		}
-
 		fmt.Println()
 	}
 
@@ -141,5 +137,10 @@ func (m *ModList) WriteModsList(outputDirector ...string) error {
 		return fmt.Errorf("error renaming temporary file: %w", err)
 	}
 
+	c := color.New(color.FgGreen)
+	_, err = c.Println("Wrote to", m.markDownFilePath)
+	if err != nil {
+		return err
+	}
 	return nil
 }

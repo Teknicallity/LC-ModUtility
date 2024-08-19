@@ -25,7 +25,7 @@ func printInitialSelection() {
 	fmt.Println("\t2. Unzip pack from downloads")
 	fmt.Println("\t3. Creating new compressed modpack")
 	fmt.Println("\t4. Download new mod")
-	fmt.Println("\tq. Quit")
+	fmt.Println("\tq. Quit and write to plugins.md")
 	fmt.Println()
 }
 
