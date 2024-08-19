@@ -3,7 +3,7 @@ package modList
 import (
 	"bufio"
 	"fmt"
-	"lethalModUtility/internal/zipUtil"
+	"lethalModUtility/internal/modInstaller"
 	"os"
 	"strings"
 )
@@ -15,7 +15,7 @@ type ModList struct {
 	updatedMods      []string
 }
 
-func NewModList(modsListFilePath string) (*ModList, error) {
+func ReadModListFromPluginsMdFile(modsListFilePath string) (*ModList, error) {
 	mList := &ModList{
 		mods:             nil,
 		markDownFilePath: modsListFilePath,
@@ -23,7 +23,7 @@ func NewModList(modsListFilePath string) (*ModList, error) {
 
 	err := mList.readModsMarkdownFile(modsListFilePath)
 	if err != nil {
-		return mList, fmt.Errorf("cannot read mods file: %w", err)
+		return nil, fmt.Errorf("cannot read mods file: %w", err)
 	}
 
 	return mList, nil
@@ -77,14 +77,13 @@ func (m *ModList) UpdateAllMods() error {
 	for i, mod := range m.mods {
 		sequence := fmt.Sprintf("[%d/%d]", i+1, listLength)
 		fmt.Printf("%-9s ", sequence)
-
 		zipFilePath, err := mod.checkAndUpdateMod()
 		if err != nil {
 			return err
 		}
 
 		if zipFilePath != "" {
-			err = zipUtil.UnzipMod(zipFilePath)
+			err = modInstaller.InstallMod(zipFilePath)
 			if err != nil {
 				return err
 			}

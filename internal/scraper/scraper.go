@@ -2,6 +2,7 @@ package scraper
 
 import (
 	"fmt"
+	"github.com/fatih/color"
 	"github.com/gocolly/colly"
 	"lethalModUtility/internal/pathUtil"
 	"lethalModUtility/internal/timeUtil"
@@ -34,7 +35,11 @@ func DownloadMod(downloadUrl string, outputFileName string) (string, error) {
 				fmt.Println("Download zip file error:", err)
 				return
 			}
-			fmt.Printf("Zip file downloaded successfully.")
+			clr := color.New(color.FgGreen)
+			_, err = clr.Printf("Zip file downloaded successfully.")
+			if err != nil {
+				return
+			}
 		}
 	})
 

@@ -9,7 +9,31 @@ import (
 	"strings"
 )
 
+func isFileAllowed(fileName string) bool {
+	blacklistedFilesNames := []string{
+		"readme.md",
+		"manifest.json",
+		"license",
+		"icon.png",
+		"changelog.md",
+	}
+	for _, blacklistedFile := range blacklistedFilesNames {
+		if blacklistedFile == strings.ToLower(fileName) {
+			return false
+		}
+	}
+	return true
+}
+
 func extractFile(file *zip.File, destPath string) error {
+	if file.FileInfo().IsDir() {
+		return nil
+	}
+
+	if !isFileAllowed(filepath.Base(destPath)) {
+		return nil
+	}
+
 	err := os.MkdirAll(filepath.Dir(destPath), os.ModePerm)
 	if err != nil {
 		fmt.Println("cannot make new directory", err)
@@ -37,31 +61,31 @@ func extractFile(file *zip.File, destPath string) error {
 	return nil
 }
 
-func unzipFile(zipFilePath string, destDirectory string) error {
+func UnzipFile(zipFilePath string, destDirectory string) (string, error) {
 	// destDirectory: user/downloads/LC_New_Mods/
 	// zipFilePath: user/downloads/LC_New_Mods/zip/foo.zip
-	zipFileName := filepath.Base(zipFilePath) // foo.zip
-	unzippedFolderName := strings.TrimSuffix(zipFileName, filepath.Ext(zipFileName))
+	zipFileName := filepath.Base(zipFilePath)                                        // foo.zip
+	unzippedFolderName := strings.TrimSuffix(zipFileName, filepath.Ext(zipFileName)) // foo
 
-	unzippedFolderPath := filepath.Join(destDirectory, unzippedFolderName)
+	unzippedFolderPath := filepath.Join(destDirectory, unzippedFolderName) // user/downloads/LC_New_Mods//foo
 
 	zipReader, err := zip.OpenReader(zipFilePath)
 	if err != nil {
 		fmt.Println("Error opening zip file:", err)
-		return err
+		return "", err
 	}
 	defer zipReader.Close()
 
 	for _, file := range zipReader.File {
 		if strings.HasPrefix(file.Name, "__MACOSX") {
-			return fmt.Errorf("unsupported mac file type: %s", file.Name)
+			return "", fmt.Errorf("unsupported mac file type: %s", file.Name)
 		}
 
-		destinationFilePath := filepath.Join(unzippedFolderPath, file.Name)
+		destinationFilePath := filepath.Join(unzippedFolderPath, file.Name) //print
 		err = extractFile(file, destinationFilePath)
 		if err != nil {
-			return err
+			return "", err
 		}
 	}
-	return nil
+	return unzippedFolderPath, nil
 }

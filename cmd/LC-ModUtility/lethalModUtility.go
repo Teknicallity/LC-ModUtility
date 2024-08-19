@@ -31,9 +31,10 @@ func printInitialSelection() {
 
 func main() {
 	clearScreen()
-	mods, err := modList.NewModList(".\\BepInEx\\plugins.md")
+	mods, err := modList.ReadModListFromPluginsMdFile(".\\BepInEx\\plugins.md")
 	if err != nil {
 		fmt.Printf("Mod List Error: %d", err)
+		return
 	}
 
 	menu(mods)
@@ -43,7 +44,7 @@ func menu(m *modList.ModList) {
 	defer func(m *modList.ModList) {
 		err := m.WriteModsList()
 		if err != nil {
-
+			fmt.Printf("error writing mod list: %s", err)
 		}
 	}(m)
 
