@@ -111,11 +111,14 @@ func (m *modEntry) downloadMod() (string, error) {
 	return zipFilePath, nil
 }
 
-func (m *modEntry) checkAndUpdateMod() (string, error) {
+func (m *modEntry) updateMod() (string, error) {
 	modNameString := fmt.Sprintf("%s:", m.modName)
 	fmt.Printf("%-25s ", modNameString)
 
-	m.fillRemoteInfo()
+	if &m.remoteInfo == nil {
+		return "", fmt.Errorf("remote info is nil")
+	}
+
 	if m.remoteInfo.ModVersion > m.localVersion {
 		versionUpgrade := fmt.Sprintf("%s -> %s", m.localVersion, m.remoteInfo.ModVersion)
 		fmt.Printf("%-18s ", versionUpgrade)

@@ -111,7 +111,10 @@ func (m *ModList) UpdateAllMods() error {
 	for i := range m.mods {
 		sequence := fmt.Sprintf("[%d/%d]", i+1, listLength)
 		fmt.Printf("%-9s ", sequence)
-		zipFilePath, err := m.mods[i].checkAndUpdateMod()
+
+		m.mods[i].fillRemoteInfo()
+
+		zipFilePath, err := m.mods[i].updateMod()
 		if err != nil {
 			return err
 		}
