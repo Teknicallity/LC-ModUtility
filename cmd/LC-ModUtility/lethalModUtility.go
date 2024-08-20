@@ -101,7 +101,7 @@ SelectionLoop:
 				return
 			}
 
-			err = m.AddMod(link)
+			err = m.AddModFromUrl(link)
 			if err != nil {
 				fmt.Println("Error:", err)
 				return

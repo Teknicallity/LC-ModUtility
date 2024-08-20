@@ -8,6 +8,8 @@ import (
 	"lethalModUtility/internal/pathUtil"
 	"os"
 	"path/filepath"
+	"slices"
+	"sort"
 	"strings"
 )
 
@@ -49,12 +51,20 @@ func (m *ModList) readModsMarkdownFile(modsListFilePath string) error {
 
 	for scanner.Scan() {
 		line := scanner.Text()
-		if strings.Contains(line, "-") {
+		if strings.HasPrefix(line, "-") {
 			modEntry, err := newModEntryFromPluginsMdLine(line)
 			if err != nil {
 				return err
 			}
-			modsSlice = append(modsSlice, modEntry)
+			//modsSlice = append(modsSlice, modEntry)
+			// Insert modEntry in the correct position to maintain alphabetical order
+			index := sort.Search(len(modsSlice), func(i int) bool {
+				return modsSlice[i].modName > modEntry.modName
+			})
+
+			// result = slices.Insert(slice, index, value)
+			// Insert the modEntry at the found index
+			modsSlice = slices.Insert(modsSlice, index, modEntry)
 		}
 	}
 	m.mods = modsSlice
@@ -62,7 +72,11 @@ func (m *ModList) readModsMarkdownFile(modsListFilePath string) error {
 	return nil
 }
 
-func (m *ModList) AddMod(modUrl string) error {
+func (m *ModList) AddModEntryToList(modEntry *modEntry) {
+
+}
+
+func (m *ModList) AddModFromUrl(modUrl string) error {
 	mod, err := newModEntryFromUrl(modUrl)
 	if err != nil {
 		return err

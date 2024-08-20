@@ -43,9 +43,8 @@ func moveModFiles(unzippedFolderPath string) error {
 			} else if file.Name() == "core" {
 				destination := filepath.Join(".", "BepInEx")
 				err = pathUtil.MoveDir(filepath.Join(unzippedFolderPath, "core"), destination)
-			} else if file.Name() == "test" {
-				destination := filepath.Join(".", "BepInEx")
-				err = pathUtil.MoveDir(filepath.Join(unzippedFolderPath, "test"), destination)
+			} else if file.Name() == "BepInExPack" {
+				err = handleNewBepinex(unzippedFolderPath)
 			}
 			if err != nil {
 				return err
@@ -88,4 +87,25 @@ func unzipMod(zipFilePath string) (string, error) {
 		return "", err
 	}
 	return unzippedFolderPath, nil
+}
+
+func handleNewBepinex(unzippedFolderPath string) error {
+	destination := filepath.Join(".")
+	err := pathUtil.MoveDir(filepath.Join(unzippedFolderPath, "BepInExPack", "BepInEx"), destination)
+	if err != nil {
+		return err
+	}
+	err = pathUtil.MoveFile(filepath.Join(unzippedFolderPath, "BepInExPack", "doorstop_config.ini"), destination)
+	if err != nil {
+		return err
+	}
+	err = pathUtil.MoveFile(filepath.Join(unzippedFolderPath, "BepInExPack", "winhttp.dll"), destination)
+	if err != nil {
+		return err
+	}
+	err = os.Remove(filepath.Join(unzippedFolderPath, "BepInExPack"))
+	if err != nil {
+		return err
+	}
+	return nil
 }

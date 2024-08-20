@@ -100,6 +100,30 @@ func GetRemoteInfoFromUrl(url string) (RemoteInfo, error) {
 		}
 	})
 
+	// On every <a> element inside <h5> tags, extract the href attribute and the text
+	var dependencies []Dependency
+	c.OnHTML("div.list-group-item div.media-body h5 a", func(e *colly.HTMLElement) {
+		var modName, dependencyUrl string
+		dependencyUrl = e.Attr("href") // "/c/lethal-company/p/BepInEx/BepInExPack/"
+		modAuthorWithName := e.Text    // "BepInEx-BepInExPack"
+		if dependencyUrl == "/c/lethal-company/p/BepInEx/BepInExPack/" {
+			return
+		}
+
+		if !strings.Contains(dependencyUrl, "https://thunderstore.io/c/") {
+			dependencyUrl = "https://thunderstore.io" + dependencyUrl
+		}
+
+		splitName := strings.Split(modAuthorWithName, "-")
+		if len(splitName) > 0 {
+			modName = splitName[len(splitName)-1]
+		}
+		dependencies = append(dependencies, Dependency{
+			Name: modName,
+			Url:  dependencyUrl,
+		})
+	})
+
 	// Visit the URL
 	err := c.Visit(url)
 	if err != nil {
@@ -117,6 +141,7 @@ func GetRemoteInfoFromUrl(url string) (RemoteInfo, error) {
 		LastUpdatedHumanReadable: lastUpdatedHuman,
 		LastUpdatedTime:          timeUtil.ParseTimeString(lastUpdatedHuman),
 		ModNameWithVersion:       modNameWithVersion,
+		Dependencies:             dependencies,
 	}, nil
 }
 

@@ -8,4 +8,10 @@ type RemoteInfo struct {
 	LastUpdatedHumanReadable string
 	LastUpdatedTime          time.Time
 	ModNameWithVersion       string
+	Dependencies             []Dependency
+}
+
+type Dependency struct {
+	Name string
+	Url  string
 }
