@@ -57,14 +57,8 @@ func (m *ModList) readModsMarkdownFile(modsListFilePath string) error {
 				return err
 			}
 			//modsSlice = append(modsSlice, modEntry)
-			// Insert modEntry in the correct position to maintain alphabetical order
-			index := sort.Search(len(modsSlice), func(i int) bool {
-				return modsSlice[i].modName > modEntry.modName
-			})
 
-			// result = slices.Insert(slice, index, value)
-			// Insert the modEntry at the found index
-			modsSlice = slices.Insert(modsSlice, index, modEntry)
+			modsSlice = m.AddModEntryToList(modsSlice, modEntry)
 		}
 	}
 	m.mods = modsSlice
@@ -72,9 +66,20 @@ func (m *ModList) readModsMarkdownFile(modsListFilePath string) error {
 	return nil
 }
 
-func (m *ModList) AddModEntryToList(modEntry *modEntry) {
+func (m *ModList) AddModEntryToList(modsSlice []modEntry, modEntry modEntry) []modEntry {
+	index := sort.Search(len(modsSlice), func(i int) bool {
+		return modsSlice[i].modName > modEntry.modName
+	})
 
+	// result = slices.Insert(slice, index, value)
+	// Insert the modEntry at the found index
+	modsSlice = slices.Insert(modsSlice, index, modEntry)
+	return modsSlice
 }
+
+//func (m *ModList) AddModEntryToList(modEntry *modEntry) {
+//
+//}
 
 func (m *ModList) AddModFromUrl(modUrl string) error {
 	mod, err := newModEntryFromUrl(modUrl)
