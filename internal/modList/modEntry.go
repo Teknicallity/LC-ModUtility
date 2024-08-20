@@ -112,9 +112,6 @@ func (m *modEntry) downloadMod() (string, error) {
 }
 
 func (m *modEntry) updateMod() (string, error) {
-	modNameString := fmt.Sprintf("%s:", m.modName)
-	fmt.Printf("%-25s ", modNameString)
-
 	if &m.remoteInfo == nil {
 		return "", fmt.Errorf("remote info is nil")
 	}
@@ -170,4 +167,15 @@ func (m *modEntry) printLastUpdatedString() {
 	if err != nil {
 		return
 	}
+}
+
+func (m *modEntry) checkForDependencies(modList *ModList) []scraper.Dependency {
+	var dependencyListings []scraper.Dependency
+	for _, dependency := range m.remoteInfo.Dependencies {
+		dependencyEntry := modList.doesModEntryExist(dependency.Name)
+		if dependencyEntry == nil {
+			dependencyListings = append(dependencyListings, dependency)
+		}
+	}
+	return dependencyListings
 }

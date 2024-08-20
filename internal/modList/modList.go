@@ -6,6 +6,7 @@ import (
 	"github.com/fatih/color"
 	"lethalModUtility/internal/modInstaller"
 	"lethalModUtility/internal/pathUtil"
+	"lethalModUtility/internal/scraper"
 	"os"
 	"path/filepath"
 	"slices"
@@ -105,14 +106,22 @@ func (m *ModList) AddModFromUrl(modUrl string) error {
 }
 
 func (m *ModList) UpdateAllMods() error {
+	var neededDependencies []scraper.Dependency
 	listLength := len(m.mods)
 	fmt.Printf("%-9s %-25s %-18s %-18s %s\n", "Queue", "Mod Name", "Status", "Last Updated", "Action")
 
 	for i := range m.mods {
 		sequence := fmt.Sprintf("[%d/%d]", i+1, listLength)
 		fmt.Printf("%-9s ", sequence)
+		modNameString := fmt.Sprintf("%s:", m.mods[i].modName)
+		fmt.Printf("%-25s ", modNameString)
 
 		m.mods[i].fillRemoteInfo()
+
+		unfulfilledDependencies := m.mods[i].checkForDependencies(m)
+		if unfulfilledDependencies != nil {
+			neededDependencies = append(neededDependencies, unfulfilledDependencies...)
+		}
 
 		zipFilePath, err := m.mods[i].updateMod()
 		if err != nil {
@@ -128,6 +137,31 @@ func (m *ModList) UpdateAllMods() error {
 		fmt.Println()
 	}
 
+	if len(neededDependencies) == 0 {
+		return nil
+	}
+
+	fmt.Println()
+	fmt.Printf("%-15s %-25s %s\n", "Dependencies", "Mod Name", "Action")
+	if err := m.handleDependencies(neededDependencies); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *ModList) handleDependencies(dependencies []scraper.Dependency) error {
+	for i, dependency := range dependencies {
+		sequence := fmt.Sprintf("[%d/%d]", i+1, len(dependencies))
+		fmt.Printf("%-15s ", sequence)
+		dependencyName := fmt.Sprintf("%s:", dependency.Name)
+		fmt.Printf("%-25s ", dependencyName)
+
+		if err := m.AddModFromUrl(dependency.Url); err != nil {
+			return fmt.Errorf("error adding dependency from %s: %w", dependency.Url, err)
+		}
+	}
+	fmt.Println()
 	return nil
 }
 
@@ -178,6 +212,17 @@ func (m *ModList) WriteModsList(outputDirector ...string) error {
 	_, err = c.Println("Wrote to", m.markDownFilePath)
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+func (m *ModList) doesModEntryExist(modName string) *modEntry {
+	index := sort.Search(len(m.mods), func(i int) bool {
+		return m.mods[i].modName >= modName
+	})
+
+	if index < len(m.mods) && m.mods[index].modName == modName {
+		return &m.mods[index]
 	}
 	return nil
 }

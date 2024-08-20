@@ -116,7 +116,7 @@ func GetRemoteInfoFromUrl(url string) (RemoteInfo, error) {
 
 		splitName := strings.Split(modAuthorWithName, "-")
 		if len(splitName) > 0 {
-			modName = splitName[len(splitName)-1]
+			modName = strings.TrimSpace(splitName[len(splitName)-1])
 		}
 		dependencies = append(dependencies, Dependency{
 			Name: modName,
