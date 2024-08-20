@@ -31,6 +31,13 @@ func GetDownloadFolderPath() string {
 }
 
 // MoveDir moves a directory and its contents from dirToBeMoved to destinationDirParent.
+//
+// Parameters:
+//   - dirToBeMoved: The path of the directory to be moved. This can be an absolute
+//     or relative path.
+//   - destinationDirParent: The parent directory where the source directory should
+//     be moved. The source directory will be placed inside this parent directory
+//     with the same name.
 func MoveDir(dirToBeMoved string, destinationDirParent string) error {
 	// Get properties of the source directory
 	srcInfo, err := os.Stat(dirToBeMoved)
@@ -89,7 +96,14 @@ func MoveDir(dirToBeMoved string, destinationDirParent string) error {
 	return nil
 }
 
-// MoveFile copies a file from src to dst and then removes the source file.
+// MoveFile moves a file from the specified source file path to the destination path.
+//
+// Parameters:
+//   - sourceFilePath: The path of the file to be moved. This can be a local file name
+//     or a full file path.
+//   - destinationPath: The destination where the file should be moved. This can be
+//     either a directory path or a full file path. If a directory path is provided,
+//     the file will be moved into this directory with the same name as the source file.
 func MoveFile(sourceFilePath string, destinationFilePath string) error {
 	// Copy the file to the destination
 	err := copyFile(sourceFilePath, destinationFilePath)
@@ -105,15 +119,31 @@ func MoveFile(sourceFilePath string, destinationFilePath string) error {
 	return nil
 }
 
-// copyFile copies a file from src to dst.
-func copyFile(sourceFilePath string, destinationFilePath string) error {
+// copyFile copies a file from the specified source file path to the destination path.
+//
+// Parameters:
+//   - sourceFilePath: The path of the source file to be copied. This can be a local
+//     file name or a full file path.
+//   - destinationPath: The destination where the file should be copied. This can
+//     either be a directory path or a full file path. If a directory path is provided,
+//     the file will be copied into this directory with the same name as the source file.
+func copyFile(sourceFilePath string, destinationPath string) error {
+	// Get the file name from the source file path
+	fileName := filepath.Base(sourceFilePath)
+
+	// Check if the destination path is a directory
+	destInfo, err := os.Stat(destinationPath)
+	if err == nil && destInfo.IsDir() {
+		destinationPath = filepath.Join(destinationPath, fileName)
+	}
+
 	srcFile, err := os.Open(sourceFilePath)
 	if err != nil {
 		return fmt.Errorf("failed to open source file: %w", err)
 	}
 	defer srcFile.Close()
 
-	dstFile, err := os.Create(destinationFilePath)
+	dstFile, err := os.Create(destinationPath)
 	if err != nil {
 		return fmt.Errorf("failed to create destination file: %w", err)
 	}
@@ -129,7 +159,7 @@ func copyFile(sourceFilePath string, destinationFilePath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to get source file info: %w", err)
 	}
-	err = os.Chmod(destinationFilePath, srcInfo.Mode())
+	err = os.Chmod(destinationPath, srcInfo.Mode())
 	if err != nil {
 		return fmt.Errorf("failed to set file permissions: %w", err)
 	}

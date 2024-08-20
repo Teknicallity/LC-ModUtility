@@ -13,8 +13,6 @@ import (
 )
 
 func DownloadMod(downloadUrl string, outputFileName string) (string, error) {
-	fmt.Println("downloadURL:", downloadUrl)
-	fmt.Println("outputFileName:", outputFileName)
 	pathToDownload := filepath.Join(pathUtil.GetDownloadFolderPath(), "LC_New_Mods", "zips")
 	zipFilePath := filepath.Join(pathToDownload, outputFileName+".zip")
 
