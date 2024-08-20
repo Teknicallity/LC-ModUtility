@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/fatih/color"
 	"lethalModUtility/internal/modInstaller"
+	"lethalModUtility/internal/pathUtil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -146,8 +147,9 @@ func (m *ModList) WriteModsList(outputDirector ...string) error {
 		return fmt.Errorf("error closing temporary file: %w", err)
 	}
 
-	if err := os.Rename(tempFile.Name(), m.markDownFilePath); err != nil {
-		return fmt.Errorf("error renaming temporary file: %w", err)
+	err = pathUtil.MoveFile(tempFile.Name(), m.markDownFilePath)
+	if err != nil {
+		return err
 	}
 
 	c := color.New(color.FgGreen)
