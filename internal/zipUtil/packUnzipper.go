@@ -37,7 +37,7 @@ func unzipBepinex(downloadsPath, packName string) error {
 	zipInput := filepath.Join(downloadsPath, packName)
 	zipReader, err := zip.OpenReader(zipInput)
 	if err != nil {
-		fmt.Println("Error opening zip file:", err)
+		fmt.Println("Error opening custom bepinexpack zip file:", err)
 		return err
 	}
 	defer zipReader.Close()
