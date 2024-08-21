@@ -6,6 +6,8 @@ import (
 	"github.com/inancgumus/screen"
 	"lethalModUtility/internal/modList"
 	"lethalModUtility/internal/zipUtil"
+	"os"
+	"path/filepath"
 )
 
 func getModLink() (string, error) {
@@ -31,7 +33,12 @@ func printInitialSelection() {
 
 func main() {
 	clearScreen()
-	mods, err := modList.ReadModListFromPluginsMdFile(".\\BepInEx\\plugins.md")
+	pluginsFile, err := findPluginsMd()
+	if err != nil {
+		fmt.Printf("Cannot find plugins.md file. Must be in local directory or ./Bepinex/")
+		return
+	}
+	mods, err := modList.NewModListFromPluginsMd(pluginsFile)
 	if err != nil {
 		fmt.Printf("Mod List Error: %d", err)
 		return
@@ -130,4 +137,17 @@ func successPrint(message ...string) {
 		message = append(message, "Success")
 	}
 	color.Green(message[0])
+}
+
+func findPluginsMd() (string, error) {
+	paths := []string{
+		filepath.Join("BepInEx", "plugins.md"),
+		"plugins.md",
+	}
+	for _, path := range paths {
+		if _, err := os.Stat(path); err == nil {
+			return path, nil // Return the valid path
+		}
+	}
+	return "", os.ErrNotExist
 }

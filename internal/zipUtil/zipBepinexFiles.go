@@ -131,6 +131,9 @@ func getZipPackVersionFromUser() (string, error) {
 func ZipBepinEx() error {
 	//Files and directories to be zipped
 	files := []string{"winhttp.dll", "doorstop_config.ini", "BepInEx"}
+	if _, err := os.Stat("plugins.md"); err == nil {
+		files = append(files, "plugins.md") // Return the valid path
+	}
 
 	version, err := getZipPackVersionFromUser()
 	if err != nil {

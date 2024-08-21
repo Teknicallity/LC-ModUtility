@@ -21,7 +21,7 @@ type ModList struct {
 	updatedMods      []string
 }
 
-func ReadModListFromPluginsMdFile(modsListFilePath string) (*ModList, error) {
+func NewModListFromPluginsMd(modsListFilePath string) (*ModList, error) {
 	mList := &ModList{
 		mods:             nil,
 		markDownFilePath: modsListFilePath,
