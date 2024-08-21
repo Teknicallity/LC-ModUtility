@@ -88,6 +88,12 @@ func (m *ModList) AddModFromUrl(modUrl string) error {
 		return err
 	}
 
+	for i := range m.mods {
+		if m.mods[i].modName == mod.modName {
+			return nil
+		}
+	}
+
 	zipFilePath, err := mod.downloadMod()
 	if err != nil {
 		return fmt.Errorf("could not download %s: %w\n", filepath.Base(zipFilePath), err)
