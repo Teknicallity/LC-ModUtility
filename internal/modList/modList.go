@@ -96,11 +96,17 @@ func (m *ModList) AddModFromUrl(modUrl string) error {
 	if zipFilePath != "" {
 		err = modInstaller.InstallModFromZip(zipFilePath)
 		if err != nil {
-			return err
+			return fmt.Errorf("could not install mod from zip file: %w\n", err)
 		}
 	}
 
 	m.mods = append(m.mods, mod)
+
+	fmt.Println()
+	err = m.handleDependencies(mod.remoteInfo.Dependencies)
+	if err != nil {
+		return fmt.Errorf("could not handle dependencies: %w\n", err)
+	}
 
 	return nil
 }

@@ -12,12 +12,12 @@ import (
 func InstallModFromZip(zipFilePath string) error {
 	unzippedFolderPath, err := unzipMod(zipFilePath)
 	if err != nil {
-		return err
+		return fmt.Errorf("error unzipping mod zip file: %w", err)
 	}
 
 	err = moveModFiles(unzippedFolderPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("error moving mod files: %w", err)
 	}
 
 	return nil
@@ -37,12 +37,15 @@ func moveModFiles(unzippedFolderPath string) error {
 			} else if file.Name() == "plugins" {
 				destination := filepath.Join(".", "BepInEx")
 				err = pathUtil.MoveDir(filepath.Join(unzippedFolderPath, "plugins"), destination)
-			} else if file.Name() == "patches" {
+			} else if file.Name() == "patchers" {
 				destination := filepath.Join(".", "BepInEx")
 				err = pathUtil.MoveDir(filepath.Join(unzippedFolderPath, "patchers"), destination)
 			} else if file.Name() == "core" {
 				destination := filepath.Join(".", "BepInEx")
 				err = pathUtil.MoveDir(filepath.Join(unzippedFolderPath, "core"), destination)
+			} else if file.Name() == "config" {
+				destination := filepath.Join(".", "BepInEx")
+				err = pathUtil.MoveDir(filepath.Join(unzippedFolderPath, "config"), destination)
 			} else if file.Name() == "BepInExPack" {
 				err = handleNewBepinex(unzippedFolderPath)
 			}

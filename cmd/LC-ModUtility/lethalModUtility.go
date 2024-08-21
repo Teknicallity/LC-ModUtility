@@ -125,14 +125,19 @@ SelectionLoop:
 			if _, err := os.Stat("BepInExBackup.zip"); err == nil {
 				err := os.RemoveAll("BepInExBackup.zip")
 				if err != nil {
-					fmt.Println("Could not remove:", err)
+					fmt.Println("Could not remove backup:", err)
 					return
 				}
 			}
 			// Create backup
-			err := zipUtil.ZipBepInEx(true)
+			err = zipUtil.ZipBepInEx(true)
 			if err != nil {
 				fmt.Println("Could not back up BepInEx folder:", err)
+				return
+			}
+			err = os.RemoveAll("BepInEx")
+			if err != nil {
+				fmt.Println("Could not remove old BepInEx folder:", err)
 				return
 			}
 
