@@ -38,15 +38,22 @@ func GetDownloadFolderPath() string {
 //   - destinationDirParent: The parent directory where the source directory should
 //     be moved. The source directory will be placed inside this parent directory
 //     with the same name.
-func MoveDir(dirToBeMoved string, destinationDirParent string) error {
+func MoveDir(dirToBeMoved string, destinationDirParent string, dirNewName ...string) error {
 	// Get properties of the source directory
 	srcInfo, err := os.Stat(dirToBeMoved)
 	if err != nil {
 		return fmt.Errorf("failed to get properties of source directory: %w", err)
 	}
 
-	// Create the destination directory with the same name as the source directory
-	destDir := filepath.Join(destinationDirParent, filepath.Base(dirToBeMoved))
+	var destDir string
+	if len(dirNewName) == 0 {
+		// Create the destination directory with the same name as the source directory
+		destDir = filepath.Join(destinationDirParent, filepath.Base(dirToBeMoved))
+	} else if len(dirNewName) == 1 {
+		destDir = filepath.Join(destinationDirParent, filepath.Base(dirNewName[0]))
+	} else {
+		return fmt.Errorf("too many new name arguments")
+	}
 	err = os.MkdirAll(destDir, srcInfo.Mode())
 	if err != nil {
 		return fmt.Errorf("failed to create destination directory: %w", err)

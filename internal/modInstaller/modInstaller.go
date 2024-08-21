@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 )
 
-func InstallMod(zipFilePath string) error {
+func InstallModFromZip(zipFilePath string) error {
 	unzippedFolderPath, err := unzipMod(zipFilePath)
 	if err != nil {
 		return err

@@ -90,7 +90,7 @@ func getBepinexPack(downloadsFolder string) string {
 	return maxVersionFileName
 }
 
-func BuildPack() error {
+func UnzipPack() error {
 
 	checkAndDeleteBepinexRelated()
 	downloadsPath := pathUtil.GetDownloadFolderPath()

@@ -128,22 +128,27 @@ func getZipPackVersionFromUser() (string, error) {
 	}
 }
 
-func ZipBepinEx() error {
+func ZipBepInEx(isBackup bool) error {
 	//Files and directories to be zipped
 	files := []string{"winhttp.dll", "doorstop_config.ini", "BepInEx"}
 	if _, err := os.Stat("plugins.md"); err == nil {
 		files = append(files, "plugins.md") // Return the valid path
 	}
 
-	version, err := getZipPackVersionFromUser()
-	if err != nil {
-		return fmt.Errorf("could not get zip pack version from user: %e", err)
+	var zipFileName string
+	if !isBackup {
+		version, err := getZipPackVersionFromUser()
+		if err != nil {
+			return fmt.Errorf("could not get zip pack version from user: %e", err)
+		}
+
+		zipFileName = fmt.Sprintf("BepinExPack_v%s.zip", version)
+	} else {
+		zipFileName = fmt.Sprintf("BepInExBackup.zip")
 	}
 
-	zipFileName := fmt.Sprintf("BepinExPack_v%s.zip", version)
-
 	// Create zip file
-	err = zipFiles(zipFileName, files)
+	err := zipFiles(zipFileName, files)
 	if err != nil {
 		return fmt.Errorf("error zipping files: %e", err)
 	}

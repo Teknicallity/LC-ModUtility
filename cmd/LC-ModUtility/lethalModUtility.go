@@ -27,6 +27,7 @@ func printInitialSelection() {
 	fmt.Println("\t2. Unzip pack from downloads")
 	fmt.Println("\t3. Creating new compressed modpack")
 	fmt.Println("\t4. Download new mod")
+	fmt.Println("\t5. Install fresh from plugins.md file")
 	fmt.Println("\tq. Quit and write to plugins.md")
 	fmt.Println()
 }
@@ -80,7 +81,7 @@ SelectionLoop:
 		case "2":
 			clearScreen()
 			fmt.Println("Selected 2: Unziping pack from downloads")
-			err := zipUtil.BuildPack()
+			err := zipUtil.UnzipPack()
 			if err != nil {
 				fmt.Println("Error:", err)
 				return
@@ -91,7 +92,7 @@ SelectionLoop:
 		case "3":
 			clearScreen()
 			fmt.Println("Selected 3: Create new compressed modpack")
-			err := zipUtil.ZipBepinEx()
+			err := zipUtil.ZipBepInEx(false)
 			if err != nil {
 				fmt.Println("Error:", err)
 				return
@@ -116,6 +117,30 @@ SelectionLoop:
 
 			fmt.Println()
 			successPrint()
+
+		case "5":
+			clearScreen()
+			fmt.Println("Selected 5: Installing fresh from plugins.md file")
+			// Remove previous backup folder
+			if _, err := os.Stat("BepInExBackup.zip"); err == nil {
+				err := os.RemoveAll("BepInExBackup.zip")
+				if err != nil {
+					fmt.Println("Could not remove:", err)
+					return
+				}
+			}
+			// Create backup
+			err := zipUtil.ZipBepInEx(true)
+			if err != nil {
+				fmt.Println("Could not back up BepInEx folder:", err)
+				return
+			}
+
+			err = m.CleanInstallAllMods()
+			if err != nil {
+				fmt.Println("Could not install all mods:", err)
+				return
+			}
 
 		case "q":
 			//os.Exit(0)

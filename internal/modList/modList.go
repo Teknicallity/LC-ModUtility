@@ -94,7 +94,7 @@ func (m *ModList) AddModFromUrl(modUrl string) error {
 	}
 
 	if zipFilePath != "" {
-		err = modInstaller.InstallMod(zipFilePath)
+		err = modInstaller.InstallModFromZip(zipFilePath)
 		if err != nil {
 			return err
 		}
@@ -129,7 +129,7 @@ func (m *ModList) UpdateAllMods() error {
 		}
 
 		if zipFilePath != "" {
-			err = modInstaller.InstallMod(zipFilePath)
+			err = modInstaller.InstallModFromZip(zipFilePath)
 			if err != nil {
 				return err
 			}
@@ -224,5 +224,54 @@ func (m *ModList) doesModEntryExist(modName string) *modEntry {
 	if index < len(m.mods) && m.mods[index].modName == modName {
 		return &m.mods[index]
 	}
+	return nil
+}
+
+// CleanInstallAllMods Downloads and installs the latest version of all mods regardless plugins file
+// Extremely Similar to UpdateAllMods. Refactor needed
+func (m *ModList) CleanInstallAllMods() error {
+	var neededDependencies []scraper.Dependency
+	listLength := len(m.mods)
+	fmt.Printf("%-9s %-25s %-18s %-18s %s\n", "Queue", "Mod Name", "Status", "Last Updated", "Action")
+
+	for i := range m.mods {
+		sequence := fmt.Sprintf("[%d/%d]", i+1, listLength)
+		fmt.Printf("%-9s ", sequence)
+		modNameString := fmt.Sprintf("%s:", m.mods[i].modName)
+		fmt.Printf("%-25s ", modNameString)
+
+		m.mods[i].fillRemoteInfo()
+		fmt.Printf("%-18s", m.mods[i].remoteInfo.ModVersion)
+
+		unfulfilledDependencies := m.mods[i].checkForDependencies(m)
+		if unfulfilledDependencies != nil {
+			neededDependencies = append(neededDependencies, unfulfilledDependencies...)
+		}
+
+		m.mods[i].printLastUpdatedString()
+		zipFilePath, err := m.mods[i].downloadMod()
+		if err != nil {
+			return fmt.Errorf("could not download %s: %w\n", filepath.Base(zipFilePath), err)
+		}
+
+		if zipFilePath != "" {
+			err = modInstaller.InstallModFromZip(zipFilePath)
+			if err != nil {
+				return err
+			}
+		}
+		fmt.Println()
+	}
+
+	if len(neededDependencies) == 0 {
+		return nil
+	}
+
+	fmt.Println()
+	fmt.Printf("%-15s %-25s %s\n", "Dependencies", "Mod Name", "Action")
+	if err := m.handleDependencies(neededDependencies); err != nil {
+		return err
+	}
+
 	return nil
 }
