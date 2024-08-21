@@ -6,15 +6,7 @@ import (
 	"github.com/inancgumus/screen"
 	"lethalModUtility/internal/modList"
 	"lethalModUtility/internal/zipUtil"
-	"os"
-	"path/filepath"
 )
-
-func getDownloadFolderPath() string {
-	userProfile := os.Getenv("USERPROFILE")
-	downloadsFolder := filepath.Join(userProfile, "Downloads")
-	return downloadsFolder
-}
 
 func getModLink() (string, error) {
 	var url string
@@ -33,15 +25,16 @@ func printInitialSelection() {
 	fmt.Println("\t2. Unzip pack from downloads")
 	fmt.Println("\t3. Creating new compressed modpack")
 	fmt.Println("\t4. Download new mod")
-	fmt.Println("\tq. Quit")
+	fmt.Println("\tq. Quit and write to plugins.md")
 	fmt.Println()
 }
 
 func main() {
 	clearScreen()
-	mods, err := modList.NewModList(".\\BepInEx\\plugins.md")
+	mods, err := modList.ReadModListFromPluginsMdFile(".\\BepInEx\\plugins.md")
 	if err != nil {
 		fmt.Printf("Mod List Error: %d", err)
+		return
 	}
 
 	menu(mods)
@@ -51,7 +44,7 @@ func menu(m *modList.ModList) {
 	defer func(m *modList.ModList) {
 		err := m.WriteModsList()
 		if err != nil {
-
+			fmt.Printf("error writing mod list: %s", err)
 		}
 	}(m)
 
@@ -108,12 +101,13 @@ SelectionLoop:
 				return
 			}
 
-			err = m.AddMod(link)
+			err = m.AddModFromUrl(link)
 			if err != nil {
 				fmt.Println("Error:", err)
 				return
 			}
 
+			fmt.Println()
 			successPrint()
 
 		case "q":

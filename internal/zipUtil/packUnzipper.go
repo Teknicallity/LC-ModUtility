@@ -3,7 +3,6 @@ package zipUtil
 import (
 	"archive/zip"
 	"fmt"
-	"io/ioutil"
 	"lethalModUtility/internal/pathUtil"
 	"os"
 	"path/filepath"
@@ -47,24 +46,14 @@ func unzipBepinex(downloadsPath, packName string) error {
 		if !strings.HasPrefix(file.Name, "__MACOSX") {
 			destPath := filepath.Join(directoryPath, file.Name)
 			if file.FileInfo().IsDir() {
-				os.MkdirAll(destPath, os.ModePerm)
+				err = os.MkdirAll(destPath, os.ModePerm)
+				if err != nil {
+					fmt.Println("cannot make new directory", err)
+					return err
+				}
 			} else {
-				extractedFile, err := file.Open()
+				err = extractFile(file, destPath)
 				if err != nil {
-					fmt.Println("Error extracting file:", err)
-					return err
-				}
-				defer extractedFile.Close()
-
-				fileBytes, err := ioutil.ReadAll(extractedFile)
-				if err != nil {
-					fmt.Println("Error reading file contents:", err)
-					return err
-				}
-
-				err = ioutil.WriteFile(destPath, fileBytes, 0644)
-				if err != nil {
-					fmt.Println("Error writing file:", err)
 					return err
 				}
 			}

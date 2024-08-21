@@ -3,7 +3,14 @@ package modList
 import (
 	"bufio"
 	"fmt"
+	"github.com/fatih/color"
+	"lethalModUtility/internal/modInstaller"
+	"lethalModUtility/internal/pathUtil"
+	"lethalModUtility/internal/scraper"
 	"os"
+	"path/filepath"
+	"slices"
+	"sort"
 	"strings"
 )
 
@@ -11,9 +18,10 @@ type ModList struct {
 	// file
 	mods             []modEntry
 	markDownFilePath string
+	updatedMods      []string
 }
 
-func NewModList(modsListFilePath string) (*ModList, error) {
+func ReadModListFromPluginsMdFile(modsListFilePath string) (*ModList, error) {
 	mList := &ModList{
 		mods:             nil,
 		markDownFilePath: modsListFilePath,
@@ -21,7 +29,7 @@ func NewModList(modsListFilePath string) (*ModList, error) {
 
 	err := mList.readModsMarkdownFile(modsListFilePath)
 	if err != nil {
-		return mList, fmt.Errorf("cannot read mods file: %w", err)
+		return nil, fmt.Errorf("cannot read mods file: %w", err)
 	}
 
 	return mList, nil
@@ -44,12 +52,14 @@ func (m *ModList) readModsMarkdownFile(modsListFilePath string) error {
 
 	for scanner.Scan() {
 		line := scanner.Text()
-		if strings.Contains(line, "-") {
-			modEntry, err := newModEntryFromFileLine(line)
+		if strings.HasPrefix(line, "-") {
+			modEntry, err := newModEntryFromPluginsMdLine(line)
 			if err != nil {
 				return err
 			}
-			modsSlice = append(modsSlice, modEntry)
+			//modsSlice = append(modsSlice, modEntry)
+
+			modsSlice = m.AddModEntryToList(modsSlice, modEntry)
 		}
 	}
 	m.mods = modsSlice
@@ -57,10 +67,37 @@ func (m *ModList) readModsMarkdownFile(modsListFilePath string) error {
 	return nil
 }
 
-func (m *ModList) AddMod(modUrl string) error {
+func (m *ModList) AddModEntryToList(modsSlice []modEntry, modEntry modEntry) []modEntry {
+	index := sort.Search(len(modsSlice), func(i int) bool {
+		return modsSlice[i].modName > modEntry.modName
+	})
+
+	// result = slices.Insert(slice, index, value)
+	// Insert the modEntry at the found index
+	modsSlice = slices.Insert(modsSlice, index, modEntry)
+	return modsSlice
+}
+
+//func (m *ModList) AddModEntryToList(modEntry *modEntry) {
+//
+//}
+
+func (m *ModList) AddModFromUrl(modUrl string) error {
 	mod, err := newModEntryFromUrl(modUrl)
 	if err != nil {
 		return err
+	}
+
+	zipFilePath, err := mod.downloadMod()
+	if err != nil {
+		return fmt.Errorf("could not download %s: %w\n", filepath.Base(zipFilePath), err)
+	}
+
+	if zipFilePath != "" {
+		err = modInstaller.InstallMod(zipFilePath)
+		if err != nil {
+			return err
+		}
 	}
 
 	m.mods = append(m.mods, mod)
@@ -69,25 +106,62 @@ func (m *ModList) AddMod(modUrl string) error {
 }
 
 func (m *ModList) UpdateAllMods() error {
+	var neededDependencies []scraper.Dependency
 	listLength := len(m.mods)
+	fmt.Printf("%-9s %-25s %-18s %-18s %s\n", "Queue", "Mod Name", "Status", "Last Updated", "Action")
 
 	for i := range m.mods {
 		sequence := fmt.Sprintf("[%d/%d]", i+1, listLength)
+		fmt.Printf("%-9s ", sequence)
 		modNameString := fmt.Sprintf("%s:", m.mods[i].modName)
-		fmt.Printf("%-9s %-25s ", sequence, modNameString)
+		fmt.Printf("%-25s ", modNameString)
 
-		m.mods[i].fillRemoteVersionAndDownloadUrl()
-		if m.mods[i].remoteVersion > m.mods[i].localVersion {
-			fmt.Printf("Updating: %s -> %s\t", m.mods[i].localVersion, m.mods[i].remoteVersion)
-			modAndVersion, err := m.mods[i].downloadMod()
-			if err != nil {
-				return fmt.Errorf("could not download %s: %w\n", modAndVersion, err)
-			}
-		} else {
-			fmt.Println("Up to date.")
+		m.mods[i].fillRemoteInfo()
+
+		unfulfilledDependencies := m.mods[i].checkForDependencies(m)
+		if unfulfilledDependencies != nil {
+			neededDependencies = append(neededDependencies, unfulfilledDependencies...)
 		}
+
+		zipFilePath, err := m.mods[i].updateMod()
+		if err != nil {
+			return err
+		}
+
+		if zipFilePath != "" {
+			err = modInstaller.InstallMod(zipFilePath)
+			if err != nil {
+				return err
+			}
+		}
+		fmt.Println()
 	}
 
+	if len(neededDependencies) == 0 {
+		return nil
+	}
+
+	fmt.Println()
+	fmt.Printf("%-15s %-25s %s\n", "Dependencies", "Mod Name", "Action")
+	if err := m.handleDependencies(neededDependencies); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *ModList) handleDependencies(dependencies []scraper.Dependency) error {
+	for i, dependency := range dependencies {
+		sequence := fmt.Sprintf("[%d/%d]", i+1, len(dependencies))
+		fmt.Printf("%-15s ", sequence)
+		dependencyName := fmt.Sprintf("%s:", dependency.Name)
+		fmt.Printf("%-25s ", dependencyName)
+
+		if err := m.AddModFromUrl(dependency.Url); err != nil {
+			return fmt.Errorf("error adding dependency from %s: %w", dependency.Url, err)
+		}
+	}
+	fmt.Println()
 	return nil
 }
 
@@ -129,9 +203,26 @@ func (m *ModList) WriteModsList(outputDirector ...string) error {
 		return fmt.Errorf("error closing temporary file: %w", err)
 	}
 
-	if err := os.Rename(tempFile.Name(), m.markDownFilePath); err != nil {
-		return fmt.Errorf("error renaming temporary file: %w", err)
+	err = pathUtil.MoveFile(tempFile.Name(), m.markDownFilePath)
+	if err != nil {
+		return err
 	}
 
+	c := color.New(color.FgGreen)
+	_, err = c.Println("Wrote to", m.markDownFilePath)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *ModList) doesModEntryExist(modName string) *modEntry {
+	index := sort.Search(len(m.mods), func(i int) bool {
+		return m.mods[i].modName >= modName
+	})
+
+	if index < len(m.mods) && m.mods[index].modName == modName {
+		return &m.mods[index]
+	}
 	return nil
 }

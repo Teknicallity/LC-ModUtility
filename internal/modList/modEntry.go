@@ -2,21 +2,28 @@ package modList
 
 import (
 	"fmt"
+	"github.com/fatih/color"
 	"lethalModUtility/internal/scraper"
+	"path/filepath"
 	"regexp"
+	"slices"
+	"strings"
+	"time"
 )
 
 type modEntry struct {
-	modName       string
-	localVersion  string
-	modUrl        string
-	remoteVersion string
-	downloadUrl   string
+	modName      string
+	localVersion string
+	modUrl       string
+	//remoteVersion string
+	//downloadUrl   string
+	//lastUpdated   string
+	remoteInfo scraper.RemoteInfo
 }
 
-func newModEntryFromFileLine(line string) (modEntry, error) {
+func newModEntryFromPluginsMdLine(line string) (modEntry, error) {
 	mod := modEntry{}
-	err := mod.parsePluginsLine(line)
+	err := mod.parsePluginsMdLine(line)
 	if err != nil {
 		return modEntry{}, err
 	}
@@ -25,18 +32,18 @@ func newModEntryFromFileLine(line string) (modEntry, error) {
 
 func newModEntryFromUrl(modUrl string) (modEntry, error) {
 	mod := modEntry{}
-	remoteModAndVersion, downloadLink := scraper.GetIdAndDownloadLink(modUrl)
-	err := scraper.DownloadMod(downloadLink, remoteModAndVersion)
+	remoteInfo, err := scraper.GetRemoteInfoFromUrl(modUrl)
 	if err != nil {
 		return mod, err
 	}
-	mod.fillInfoFromModAndVersion(remoteModAndVersion)
+	mod.fillInfoFromModAndVersion(remoteInfo.ModNameWithVersion)
 	mod.modUrl = modUrl
+	mod.remoteInfo = remoteInfo
 
 	return mod, nil
 }
 
-func (m *modEntry) parsePluginsLine(line string) error {
+func (m *modEntry) parsePluginsMdLine(line string) error {
 	var mod, version, modUrl string
 
 	//versionPattern := `\[(.*?)\]\(`
@@ -68,19 +75,15 @@ func (m *modEntry) parsePluginsLine(line string) error {
 	return nil
 }
 
-func (m *modEntry) fillRemoteVersionAndDownloadUrl() {
-	var remoteVersion string
+func (m *modEntry) fillRemoteInfo() {
 
-	remoteModAndVersion, downloadLink := scraper.GetIdAndDownloadLink(m.modUrl)
-	versionPattern := `-([\d.]+)`
-	versionRegx := regexp.MustCompile(versionPattern)
-	remoteVersionMatches := versionRegx.FindStringSubmatch(remoteModAndVersion)
-	if len(remoteVersionMatches) >= 2 {
-		remoteVersion = remoteVersionMatches[1]
+	//remoteModAndVersion, downloadLink := scraper.GetRemoteInfoFromUrl(m.modUrl)
+	remoteInfo, err := scraper.GetRemoteInfoFromUrl(m.modUrl)
+	if err != nil {
+		return
 	}
 
-	m.remoteVersion = remoteVersion
-	m.downloadUrl = downloadLink
+	m.remoteInfo = remoteInfo
 }
 
 func (m *modEntry) fillInfoFromModAndVersion(modAndVersion string) {
@@ -98,12 +101,81 @@ func (m *modEntry) getMarkdownEntry() string {
 }
 
 func (m *modEntry) downloadMod() (string, error) {
-	m.localVersion = m.remoteVersion
-	modAndVersion := fmt.Sprintf(m.modName + "-" + m.localVersion)
-	err := scraper.DownloadMod(m.downloadUrl, modAndVersion)
+	m.localVersion = m.remoteInfo.ModVersion
+	modNameWithVersion := fmt.Sprintf(m.modName + "-" + m.localVersion)
+	zipFilePath, err := scraper.DownloadMod(m.remoteInfo.DownloadUrl, modNameWithVersion)
 	if err != nil {
 		return "", err
 	}
 
-	return modAndVersion, nil
+	return zipFilePath, nil
+}
+
+func (m *modEntry) updateMod() (string, error) {
+	if &m.remoteInfo == nil {
+		return "", fmt.Errorf("remote info is nil")
+	}
+
+	if m.remoteInfo.ModVersion > m.localVersion {
+		versionUpgrade := fmt.Sprintf("%s -> %s", m.localVersion, m.remoteInfo.ModVersion)
+		fmt.Printf("%-18s ", versionUpgrade)
+		m.printLastUpdatedString()
+		zipFilePath, err := m.downloadMod()
+		if err != nil {
+			return "", fmt.Errorf("could not download %s: %w\n", filepath.Base(zipFilePath), err)
+		}
+		return zipFilePath, nil
+	}
+	upToDate := fmt.Sprintf("Up to date.")
+	fmt.Printf("%-18s ", upToDate)
+	m.printLastUpdatedString()
+
+	return "", nil
+}
+
+func (m *modEntry) printLastUpdatedString() {
+	var c *color.Color
+	now := time.Now()
+
+	switch {
+	case m.remoteInfo.LastUpdatedTime.After(now.AddDate(0, 0, -1)):
+		c = color.New(color.FgHiCyan)
+	case m.remoteInfo.LastUpdatedTime.After(now.AddDate(0, 0, -8)):
+		c = color.New(color.FgCyan)
+	case m.remoteInfo.LastUpdatedTime.After(now.AddDate(0, -1, -1)):
+		c = color.New(color.FgHiBlue)
+	case m.remoteInfo.LastUpdatedTime.After(now.AddDate(0, -3, -1)):
+		c = color.New(color.FgHiGreen)
+	case m.remoteInfo.LastUpdatedTime.After(now.AddDate(0, -6, -1)):
+		c = color.New(color.FgHiYellow)
+	case m.remoteInfo.LastUpdatedTime.After(now.AddDate(-1, 0, -1)):
+		c = color.New(color.FgYellow)
+	case m.remoteInfo.LastUpdatedTime.After(now.AddDate(-2, 0, -1)):
+		c = color.New(color.FgHiRed)
+	default:
+		c = color.New(color.FgRed)
+	}
+
+	whitelist := []string{
+		"bepinex",
+	}
+	if slices.Contains(whitelist, strings.ToLower(m.modName)) {
+		c = color.New(color.FgHiBlack)
+	}
+
+	_, err := c.Printf("%-16s ", m.remoteInfo.LastUpdatedHumanReadable)
+	if err != nil {
+		return
+	}
+}
+
+func (m *modEntry) checkForDependencies(modList *ModList) []scraper.Dependency {
+	var dependencyListings []scraper.Dependency
+	for _, dependency := range m.remoteInfo.Dependencies {
+		dependencyEntry := modList.doesModEntryExist(dependency.Name)
+		if dependencyEntry == nil {
+			dependencyListings = append(dependencyListings, dependency)
+		}
+	}
+	return dependencyListings
 }
