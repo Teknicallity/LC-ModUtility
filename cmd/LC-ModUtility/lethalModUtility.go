@@ -5,9 +5,11 @@ import (
 	"github.com/fatih/color"
 	"github.com/inancgumus/screen"
 	"lethalModUtility/internal/modList"
+	"lethalModUtility/internal/pathUtil"
 	"lethalModUtility/internal/zipUtil"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func getModLink() (string, error) {
@@ -121,9 +123,34 @@ SelectionLoop:
 		case "5":
 			clearScreen()
 			fmt.Println("Selected 5: Installing fresh from plugins.md file")
+			var withConfigChoice string
+			fmt.Print("Would you like to keep the old config? (y/n): ")
+			_, err = fmt.Scanln(&withConfigChoice)
+			if err != nil {
+				fmt.Println("Could not read selection")
+				continue
+			}
+
+			var isInstallWithConfig bool
+			if strings.ToLower(withConfigChoice)[0] == 'y' {
+				isInstallWithConfig = true
+			} else if strings.ToLower(withConfigChoice)[0] == 'n' {
+				isInstallWithConfig = false
+			} else {
+				fmt.Println("Please enter 'y' or 'n'")
+				continue
+			}
+			if isInstallWithConfig {
+				err = pathUtil.MoveDir(filepath.Join("BepInEx", "config"), ".")
+				if err != nil {
+					fmt.Println("Could not move Bepinex config for safekeeping:", err)
+					return
+				}
+			}
+
 			// Remove previous backup folder
-			if _, err := os.Stat("BepInExBackup.zip"); err == nil {
-				err := os.RemoveAll("BepInExBackup.zip")
+			if _, err = os.Stat("BepInExBackup.zip"); err == nil {
+				err = os.RemoveAll("BepInExBackup.zip")
 				if err != nil {
 					fmt.Println("Could not remove backup:", err)
 					return
@@ -139,6 +166,14 @@ SelectionLoop:
 			if err != nil {
 				fmt.Println("Could not remove old BepInEx folder:", err)
 				return
+			}
+
+			if isInstallWithConfig {
+				err = pathUtil.MoveDir("config", "BepInEx")
+				if err != nil {
+					fmt.Println("Could not move Bepinex config into place:", err)
+					return
+				}
 			}
 
 			err = m.CleanInstallAllMods()
