@@ -13,7 +13,7 @@ func ParseTimeString(timeStr string) time.Time {
 	//timeStr: '18 hours ago'
 	parts := strings.Split(timeStr, " ")
 	if len(parts) < 3 {
-		fmt.Println("Invalid time format")
+		fmt.Printf("Invalid time format: %v\n", parts)
 		return now
 	}
 

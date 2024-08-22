@@ -6,7 +6,6 @@ import (
 	"github.com/fatih/color"
 	"lethalModUtility/internal/modInstaller"
 	"lethalModUtility/internal/pathUtil"
-	"lethalModUtility/internal/scraper"
 	"os"
 	"path/filepath"
 	"slices"
@@ -109,7 +108,7 @@ func (m *ModList) AddModFromUrl(modUrl string) error {
 	m.mods = append(m.mods, mod)
 
 	fmt.Println()
-	err = m.handleDependencies(mod.remoteInfo.Dependencies)
+	err = m.handleDependencies([]modEntry{mod})
 	if err != nil {
 		return fmt.Errorf("could not handle dependencies: %w\n", err)
 	}
@@ -118,7 +117,7 @@ func (m *ModList) AddModFromUrl(modUrl string) error {
 }
 
 func (m *ModList) UpdateAllMods() error {
-	var neededDependencies []scraper.Dependency
+	var modsThatNeedDependencyInstalls []modEntry
 	listLength := len(m.mods)
 	fmt.Printf("%-9s %-25s %-18s %-18s %s\n", "Queue", "Mod Name", "Status", "Last Updated", "Action")
 
@@ -130,9 +129,9 @@ func (m *ModList) UpdateAllMods() error {
 
 		m.mods[i].fillRemoteInfo()
 
-		unfulfilledDependencies := m.mods[i].checkForDependencies(m)
+		unfulfilledDependencies := m.mods[i].getUnfulfilledDependencies(m)
 		if unfulfilledDependencies != nil {
-			neededDependencies = append(neededDependencies, unfulfilledDependencies...)
+			modsThatNeedDependencyInstalls = append(modsThatNeedDependencyInstalls, m.mods[i])
 		}
 
 		zipFilePath, err := m.mods[i].updateMod()
@@ -149,28 +148,31 @@ func (m *ModList) UpdateAllMods() error {
 		fmt.Println()
 	}
 
-	if len(neededDependencies) == 0 {
+	if len(modsThatNeedDependencyInstalls) == 0 {
 		return nil
 	}
 
 	fmt.Println()
-	fmt.Printf("%-15s %-25s %s\n", "Dependencies", "Mod Name", "Action")
-	if err := m.handleDependencies(neededDependencies); err != nil {
+	fmt.Printf("%-9s %-25s %-25s %s\n", "", "Dependent", "Dependency Name", "Action")
+	if err := m.handleDependencies(modsThatNeedDependencyInstalls); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (m *ModList) handleDependencies(dependencies []scraper.Dependency) error {
-	for i, dependency := range dependencies {
-		sequence := fmt.Sprintf("[%d/%d]", i+1, len(dependencies))
-		fmt.Printf("%-15s ", sequence)
-		dependencyName := fmt.Sprintf("%s:", dependency.Name)
-		fmt.Printf("%-25s ", dependencyName)
+func (m *ModList) handleDependencies(modEntriesInNeed []modEntry) error {
+	for _, mEntry := range modEntriesInNeed {
 
-		if err := m.AddModFromUrl(dependency.Url); err != nil {
-			return fmt.Errorf("error adding dependency from %s: %w", dependency.Url, err)
+		for i, dependency := range mEntry.remoteInfo.Dependencies {
+			sequence := fmt.Sprintf("[%d/%d]", i+1, len(mEntry.remoteInfo.Dependencies))
+			fmt.Printf("%-9s%-25s ", sequence, mEntry.modName)
+			dependencyName := fmt.Sprintf("%s:", dependency.Name)
+			fmt.Printf("%-25s ", dependencyName)
+
+			if err := m.AddModFromUrl(dependency.Url); err != nil {
+				return fmt.Errorf("error adding dependency from %s: %w", dependency.Url, err)
+			}
 		}
 	}
 	fmt.Println()
@@ -221,7 +223,7 @@ func (m *ModList) WriteModsList(outputDirector ...string) error {
 	}
 
 	c := color.New(color.FgGreen)
-	_, err = c.Println("Wrote to", m.markDownFilePath)
+	_, err = c.Printf("Wrote to %s\n", m.markDownFilePath)
 	if err != nil {
 		return err
 	}
@@ -242,7 +244,7 @@ func (m *ModList) doesModEntryExist(modName string) *modEntry {
 // CleanInstallAllMods Downloads and installs the latest version of all mods regardless plugins file
 // Extremely Similar to UpdateAllMods. Refactor needed
 func (m *ModList) CleanInstallAllMods() error {
-	var neededDependencies []scraper.Dependency
+	var modsThatNeedDependencyInstalls []modEntry
 	listLength := len(m.mods)
 	fmt.Printf("%-9s %-25s %-18s %-18s %s\n", "Queue", "Mod Name", "Status", "Last Updated", "Action")
 
@@ -255,9 +257,9 @@ func (m *ModList) CleanInstallAllMods() error {
 		m.mods[i].fillRemoteInfo()
 		fmt.Printf("%-18s", m.mods[i].remoteInfo.ModVersion)
 
-		unfulfilledDependencies := m.mods[i].checkForDependencies(m)
+		unfulfilledDependencies := m.mods[i].getUnfulfilledDependencies(m)
 		if unfulfilledDependencies != nil {
-			neededDependencies = append(neededDependencies, unfulfilledDependencies...)
+			modsThatNeedDependencyInstalls = append(modsThatNeedDependencyInstalls, m.mods[i])
 		}
 
 		m.mods[i].printLastUpdatedString()
@@ -275,13 +277,13 @@ func (m *ModList) CleanInstallAllMods() error {
 		fmt.Println()
 	}
 
-	if len(neededDependencies) == 0 {
+	if len(modsThatNeedDependencyInstalls) == 0 {
 		return nil
 	}
 
 	fmt.Println()
-	fmt.Printf("%-15s %-25s %s\n", "Dependencies", "Mod Name", "Action")
-	if err := m.handleDependencies(neededDependencies); err != nil {
+	fmt.Printf("%-9s %-25s %-25s %s\n", "", "Dependent", "Dependency Name", "Action")
+	if err := m.handleDependencies(modsThatNeedDependencyInstalls); err != nil {
 		return err
 	}
 
