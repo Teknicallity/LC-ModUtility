@@ -9,12 +9,83 @@ param(
 $testrun=$false
 $verbose=$false
 
-$directoryPath = ".\"
+function Get-SteamInstallPath {
+    try {
+        $regKey = "HKCU:\Software\Valve\Steam"
+        $steamPath = (Get-ItemProperty -Path $regKey).SteamPath
+        return $steamPath
+    } catch {
+        Write-Host "Steam installation not found." -ForegroundColor Red
+        return $null
+    }
+}
+
+function Get-SteamLibraryFolders {
+    param (
+        [string]$SteamPath
+    )
+
+    $libraryFile = Join-Path -Path $SteamPath -ChildPath "steamapps\libraryfolders.vdf"
+    if (Test-Path $libraryFile) {
+        $vdfContent = Get-Content $libraryFile -Raw
+        $libraryFolders = @()
+
+        # Extract each path manually
+        $steamLibraryMatches = [regex]::Matches($vdfContent, '"\d+"\s*{\s*"path"\s*"([^"]+)"')
+        foreach ($match in $steamLibraryMatches) {
+            $libraryFolders += $match.Groups[1].Value
+        }
+		if ($verbose) {Write-Host "Steam Libary Paths: $libraryFolders"}
+        return $libraryFolders
+    } else {
+        Write-Host "Library folders file not found." -ForegroundColor Red
+        return @()
+    }
+}
+
+function Find-LethalCompany {
+    param (
+        [string[]]$LibraryPaths
+    )
+
+    $lethalCompanyAppId = "1966720"
+    foreach ($path in $LibraryPaths) {
+        $appManifest = Join-Path -Path $path -ChildPath "steamapps\appmanifest_$lethalCompanyAppId.acf"
+        if (Test-Path $appManifest) {
+            $gamePath = Join-Path -Path $path -ChildPath "steamapps\common\Lethal Company"
+			if ($verbose) {Write-Host "Base Steam Path: $steamPath"}
+            return $gamePath
+        }
+    }
+    return $null
+}
+
+function Get-LethalCompanyFolder {
+	$steamPath = Get-SteamInstallPath
+    if (-not $steamPath) {
+        return $null
+    }
+
+    $libraryPaths = Get-SteamLibraryFolders -SteamPath $steamPath
+    if ($libraryPaths.Count -eq 0) {
+        Write-Host "No Steam library folders found." -ForegroundColor Red
+        return $null
+    }
+
+    $gamePath = Find-LethalCompany -LibraryPaths $libraryPaths
+    if ($gamePath) {
+        Write-Host "Lethal Company found at: " -NoNewline
+		Write-Host "$gamePath" -ForegroundColor DarkGreen
+		return $gamePath
+    }
+	Write-Host "Lethal Company not found in any Steam library." -ForegroundColor Red
+	return $null
+}
 
 function Remove-Bepinex-Files {
-	$bepinexPath = Join-Path -Path $directoryPath -ChildPath "Bepinex"
-	$winhttpPath = Join-Path -Path $directoryPath -ChildPath "winhttp.dll"
-	$doorstopPath = Join-Path -Path $directoryPath -ChildPath "doorstop_config.ini"
+	$bepinexPath = Join-Path -Path $lethalCompanyPath -ChildPath "Bepinex"
+	$winhttpPath = Join-Path -Path $lethalCompanyPath -ChildPath "winhttp.dll"
+	$doorstopPath = Join-Path -Path $lethalCompanyPath -ChildPath "doorstop_config.ini"
 
 	# If bepinex exists, delete
 	if (Test-Path -Path $bepinexPath -PathType Container){
@@ -34,35 +105,36 @@ function Remove-Bepinex-Files {
 	}
 }
 
-function Get-Download-Folder-Path {
+function Get-User-Download-Folder-Path {
 	$userProfile = $env:USERPROFILE
 	$downloadsFolder = Join-Path -Path $userProfile -ChildPath "Downloads"
 	Write-Host "Downloads folder: '$downloadsFolder'"
 	return $downloadsFolder
 }
 
-function Unzip-Bepinex($downloadsPath, $packName) {
+function Unarchive-Bepinex-Pack($downloadsPath, $packName) {
 	$zipInput = Join-Path -Path $downloadsPath -ChildPath $packName
-	Write-Host "Unzipping: " -ForegroundColor Yellow -NoNewLine
-	Write-Host "$(if ($verbose) {"'$zipInput'"} else {"'$packName'"})"
-	#$zipOutput = Join-Path -Path $directoryPath -ChildPath $directoryPath
+	Write-Host "Unzipping: " -NoNewLine
+	Write-Host "$(if ($verbose) {"'$zipInput'"} else {"'$packName'"})" -ForegroundColor Yellow
+	Write-Host "`tinto: $lethalCompanyPath"
+	#$zipOutput = Join-Path -Path $lethalCompanyPath -ChildPath $lethalCompanyPath
 	if (!$testrun){
-		Expand-Archive -Force -Path $zipInput -DestinationPath $directoryPath #$zipOutput
+		Expand-Archive -Force -Path $zipInput -DestinationPath $lethalCompanyPath #$zipOutput
 	}
 	if ($verbose) {Write-Host "Expanded archive"}
 }
 
-function Get-BepinexPack {
+function Get-BepinexPack-Archive-Name {
 	param (
 		[string]$downloadsFolder
 	)
 	$pattern = '^BepinExPack_v(\d+(\.\d+)*)\.zip$'
 	$matchingFiles = Get-ChildItem -Path $downloadsFolder | Where-Object { $_.Name -match $pattern }
 	if ($verbose) {Write-Host $matchingFiles}
-	return Find-Highest-Version $matchingFiles
+	return Find-Highest-Version-Pack $matchingFiles
 }
 
-function Find-Highest-Version($matchingFiles) {
+function Find-Highest-Version-Pack($matchingFiles) {
 	$maxVersion = 0
 	$maxVersionFileName = ""
 
@@ -91,21 +163,21 @@ function Find-Highest-Version($matchingFiles) {
 	return $maxVersionFileName
 }
 
-#delete current bepinex folder and related files
-#get the latest modpack version file Name
-#unzip the file to the current directory
+
+
+$lethalCompanyPath = Get-LethalCompanyFolder
 $err = 0
 
 Remove-Bepinex-Files
-$downloadsPath = Get-Download-Folder-Path
-$BepinexPackZip = Get-BepinexPack -downloadsFolder $downloadsPath
+$downloadsPath = Get-User-Download-Folder-Path
+$BepinexPackZip = Get-BepinexPack-Archive-Name -downloadsFolder $downloadsPath
 if ($BepinexPackZip -eq "") {
 	Write-Host "ERROR: Cannot find BepinexPack zip file" -ForegroundColor red
 	$err = 1
-	
+
 } else {
 	try {
-		Unzip-Bepinex $downloadsPath $BepinexPackZip
+		Unarchive-Bepinex-Pack $downloadsPath $BepinexPackZip
 	} catch {
 		Write-Host "ERROR: Cannot unzip" -ForegroundColor red
 		$err = 1
@@ -113,15 +185,14 @@ if ($BepinexPackZip -eq "") {
 }
 
 if ($err -eq 0) {
-	Write-Host "Success!" -ForegroundColor Green
+	Write-Host "Success!" -ForegroundColor DarkGreen
 } else {
 	Write-Host "Something went wrong" -ForegroundColor red
 }
 
 
 #Read-Host -Prompt "Press Enter to exit"
-if ($Host.Name -eq "ConsoleHost")
-{
+if ($Host.Name -eq "ConsoleHost"){
     Write-Host "Press any key to exit..."
     $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyUp") > $null
 }
