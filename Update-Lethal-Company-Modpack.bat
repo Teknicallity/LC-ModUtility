@@ -1,68 +1,94 @@
 # 2>NUL & @CLS & PUSHD "%~dp0" & "%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -nol -nop -ep bypass "[IO.File]::ReadAllText('%~f0')|iex" & POPD & EXIT /B
 
+param(
+    [switch]$testrun,
+    [Alias("v")]
+    [switch]$verbose
+)
+
+$testrun=$false
+$verbose=$false
+
 $directoryPath = ".\"
 
-function Check-And-Delete-Bepinex-Related {
+function Remove-Bepinex-Files {
 	$bepinexPath = Join-Path -Path $directoryPath -ChildPath "Bepinex"
-	
-	if (Test-Path -Path $bepinexPath -PathType Container){
-		Remove-Item -Path $bepinexPath -Recurse -Force
-		Write-Host "Bepinex folder deleted"
-	} else{
-		Write-Host "Bepinex directory does not exist. Creating directory"
-	}
-	
 	$winhttpPath = Join-Path -Path $directoryPath -ChildPath "winhttp.dll"
 	$doorstopPath = Join-Path -Path $directoryPath -ChildPath "doorstop_config.ini"
-	
+
+	# If bepinex exists, delete
+	if (Test-Path -Path $bepinexPath -PathType Container){
+		if (!$testrun) {Remove-Item -Path $bepinexPath -Recurse -Force}
+		Write-Host "Bepinex folder deleted$(if ($verbose) {": '$bepinexPath'"})"
+	} else{
+		Write-Host "Bepinex directory does not exist. Creating directory$(if ($verbose) {": '$bepinexPath'"})"
+	}
+
 	if (Test-Path -Path $winhttpPath -PathType Leaf){
-		Remove-Item -Path $winhttpPath -Force
+		if (!$testrun) {Remove-Item -Path $winhttpPath -Force}
+		if ($verbose) {Write-Host "Deleted '$winhttpPath'"}
 	}
 	if (Test-Path -Path $doorstopPath -PathType Leaf){
-		Remove-Item -Path $doorstopPath -Force
+		if (!$testrun) {Remove-Item -Path $doorstopPath -Force}
+		if ($verbose) {Write-Host "Deleted '$doorstopPath'"}
 	}
 }
 
 function Get-Download-Folder-Path {
 	$userProfile = $env:USERPROFILE
 	$downloadsFolder = Join-Path -Path $userProfile -ChildPath "Downloads"
-	Write-Host "Downloads folder: $downloadsFolder"
+	Write-Host "Downloads folder: '$downloadsFolder'"
 	return $downloadsFolder
 }
 
 function Unzip-Bepinex($downloadsPath, $packName) {
-	Write-Host "Unzipping: $packName"
 	$zipInput = Join-Path -Path $downloadsPath -ChildPath $packName
+	Write-Host "Unzipping: " -ForegroundColor Yellow -NoNewLine
+	Write-Host "$(if ($verbose) {"'$zipInput'"} else {"'$packName'"})"
 	#$zipOutput = Join-Path -Path $directoryPath -ChildPath $directoryPath
-	Expand-Archive -Force -Path $zipInput -DestinationPath $directoryPath #$zipOutput 
+	if (!$testrun){
+		Expand-Archive -Force -Path $zipInput -DestinationPath $directoryPath #$zipOutput
+	}
+	if ($verbose) {Write-Host "Expanded archive"}
 }
 
 function Get-BepinexPack {
 	param (
 		[string]$downloadsFolder
 	)
-	$pattern = 'BepInExPack_v(\d+)'
+	$pattern = '^BepinExPack_v(\d+(\.\d+)*)\.zip$'
 	$matchingFiles = Get-ChildItem -Path $downloadsFolder | Where-Object { $_.Name -match $pattern }
-	Find-Highest-Version $matchingFiles
+	if ($verbose) {Write-Host $matchingFiles}
+	return Find-Highest-Version $matchingFiles
 }
 
 function Find-Highest-Version($matchingFiles) {
 	$maxVersion = 0
 	$maxVersionFileName = ""
 
+	if ($verbose) {Write-Host "Filenames:"}
 	# Iterate through the file names
 	foreach ($fileName in $matchingFiles) {
+		if ($verbose) {Write-Host "`t'$fileName'"}
 		if ($fileName -match $pattern) {
-			$version = [int]$matches[1]
+			if ($verbose) {Write-Host "`t`tMatched"}
+			# if ($verbose) {Write-Host "`t`t$($matches | Out-String)"}
+			$version = [float]$matches[1]
 
 			# Check if the current version is greater than the maximum version
+			if ($verbose) {Write-Host "`t`t$version > $maxVersion " -NoNewLine}
 			if ($version -gt $maxVersion) {
+				if ($verbose) {Write-Host "is true"}
 				$maxVersion = $version
 				$maxVersionFileName = $fileName
-			}
-		}
+			} elseif ($verbose) {Write-Host "is false"}
+		} elseif ($verbose) {Write-Host "`t`tNo match"}
 	}
-	$maxVersionFileName
+	if ($verbose){
+		Write-Host "Max Version: '$maxVersion'"
+		Write-Host "Max Version Filename: '$maxVersionFileName'"
+	}
+	return $maxVersionFileName
 }
 
 #delete current bepinex folder and related files
@@ -70,7 +96,7 @@ function Find-Highest-Version($matchingFiles) {
 #unzip the file to the current directory
 $err = 0
 
-Check-And-Delete-Bepinex-Related
+Remove-Bepinex-Files
 $downloadsPath = Get-Download-Folder-Path
 $BepinexPackZip = Get-BepinexPack -downloadsFolder $downloadsPath
 if ($BepinexPackZip -eq "") {
