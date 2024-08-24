@@ -14,10 +14,13 @@ runs:
         go-version: ${{ inputs.go-version }}
 
     - name: Get go mod dependencies
+      shell: powershell
       run: go mod download
 
     - name: Build
+      shell: powershell
       run: go build -mod=mod -v ./...
 
     - name: Go Test
+      shell: powershell
       run: go test -v ./...
