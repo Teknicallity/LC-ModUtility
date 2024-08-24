@@ -1,0 +1,23 @@
+name: 'Go Test Action'
+description: 'A reusable action to run Go tests'
+inputs:
+  go-version:
+    description: 'Version of Go to use'
+    required: false
+    default: '1.22'
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ inputs.go-version }}
+
+    - name: Get go mod dependencies
+      run: go mod download
+
+    - name: Build
+      run: go build -mod=mod -v ./...
+
+    - name: Go Test
+      run: go test -v ./...
