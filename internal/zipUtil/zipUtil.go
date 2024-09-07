@@ -71,8 +71,7 @@ func UnzipFile(zipFilePath string, destDirectory string) (string, error) {
 
 	zipReader, err := zip.OpenReader(zipFilePath)
 	if err != nil {
-		fmt.Println("Error opening zip file:", err)
-		return "", err
+		return "", fmt.Errorf("Error opening zip file, %s: %w\n", unzippedFolderPath, err)
 	}
 	defer zipReader.Close()
 

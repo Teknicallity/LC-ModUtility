@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -16,9 +17,13 @@ func DownloadMod(downloadUrl string, outputFileName string) (string, error) {
 	pathToDownload := filepath.Join(pathUtil.GetDownloadFolderPath(), "LC_New_Mods", "zips")
 	zipFilePath := filepath.Join(pathToDownload, outputFileName+".zip")
 
-	c := colly.NewCollector(colly.MaxBodySize(100 * 1024 * 1024))
-	c.OnError(func(_ *colly.Response, err error) {
-		fmt.Println("Something went wrong: ", err)
+	c := colly.NewCollector(colly.MaxBodySize(200 * 1024 * 1024))
+	c.OnError(func(r *colly.Response, err error) {
+		if r != nil && r.StatusCode == 0 {
+			fmt.Println("File size exceeds the allowed limit.")
+		} else {
+			fmt.Println("Something went wrong: ", err)
+		}
 	})
 
 	c.OnResponse(func(r *colly.Response) {
@@ -26,20 +31,43 @@ func DownloadMod(downloadUrl string, outputFileName string) (string, error) {
 			if _, err := os.Stat(pathToDownload); os.IsNotExist(err) {
 				err = os.MkdirAll(pathToDownload, os.ModePerm)
 				if err != nil {
-					fmt.Println("cannot make new mod directory", err)
+					fmt.Println("Cannot create mod directory:", err)
 					return
 				}
 			}
 			err := r.Save(zipFilePath)
 			if err != nil {
-				fmt.Println("Download zip file error:", err)
+				fmt.Println("Error saving zip file:", err)
 				return
 			}
+
+			// Verify the downloaded file size
+			downloadedFileInfo, err := os.Stat(zipFilePath)
+			if err != nil {
+				fmt.Println("Error checking downloaded file:", err)
+				return
+			}
+
+			contentLength := r.Headers.Get("Content-Length")
+			if contentLength != "" {
+				expectedSize, err := strconv.ParseInt(contentLength, 10, 64)
+				if err != nil {
+					fmt.Println("Error parsing Content-Length:", err)
+					return
+				}
+				if downloadedFileInfo.Size() != expectedSize {
+					fmt.Printf("Downloaded file is incomplete: expected %d bytes, got %d bytes\n", expectedSize, downloadedFileInfo.Size())
+					return
+				}
+			}
+
 			clr := color.New(color.FgGreen)
 			_, err = clr.Printf("Zip file downloaded successfully.")
 			if err != nil {
 				return
 			}
+		} else {
+			fmt.Println("Invalid content type received. Expected a zip file.")
 		}
 	})
 

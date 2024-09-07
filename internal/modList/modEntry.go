@@ -169,7 +169,7 @@ func (m *modEntry) printLastUpdatedString() {
 	}
 }
 
-func (m *modEntry) checkForDependencies(modList *ModList) []scraper.Dependency {
+func (m *modEntry) getUnfulfilledDependencies(modList *ModList) []scraper.Dependency {
 	var dependencyListings []scraper.Dependency
 	for _, dependency := range m.remoteInfo.Dependencies {
 		dependencyEntry := modList.doesModEntryExist(dependency.Name)
