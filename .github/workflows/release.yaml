@@ -41,6 +41,12 @@ jobs:
       - name: list
         run: ls
 
+      - name: Upload exe artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: exe-file
+          path: LC-ModUtility_${{github.ref_name}}.exe
+
   publish:
     needs: [build]
 #    runs-on: ubuntu-latest
@@ -49,8 +55,25 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      - uses: softprops/action-gh-release@v2
+
+      - name: Download exe artifact
+        uses: actions/download-artifact@v3
         with:
+          name: exe-file
+
+      - name: list
+        run: ls
+
+      - name: Build Changelog
+        id: github_release
+        uses: mikepenz/release-changelog-builder-action@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body: ${{steps.github_release.outputs.changelog}}
           files: |
             LC-ModUtility_${{github.ref_name}}.exe
             Update-Lethal-Company-Modpack.bat
