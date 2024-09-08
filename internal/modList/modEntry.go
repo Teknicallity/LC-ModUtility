@@ -15,10 +15,7 @@ type modEntry struct {
 	modName      string
 	localVersion string
 	modUrl       string
-	//remoteVersion string
-	//downloadUrl   string
-	//lastUpdated   string
-	remoteInfo scraper.RemoteInfo
+	remoteInfo   scraper.RemoteInfo
 }
 
 func newModEntryFromPluginsMdLine(line string) (modEntry, error) {

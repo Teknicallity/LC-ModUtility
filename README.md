@@ -12,6 +12,7 @@
 - [Installation](#installation)
 - [Usage](#usage)
 - [Limitations](#limitations)
+- [Planned](#planned)
 - [License](#license)
 
 
@@ -45,6 +46,13 @@ install the modpack for them.
 ## Limitations
 
 - Error recovery is not ideal
+
+## Planned
+
+- Git support for plugins.md and maybe config files
+- Storing what files belong to what mod
+- Easy mod removal
+- Easier config management
 
 ## License
 
