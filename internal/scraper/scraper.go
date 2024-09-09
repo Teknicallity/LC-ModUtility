@@ -27,7 +27,9 @@ func DownloadMod(downloadUrl string, outputFileName string) (string, error) {
 	})
 
 	c.OnResponse(func(r *colly.Response) {
-		if strings.Contains(r.Headers.Get("Content-Type"), "application/zip") {
+		if strings.Contains(r.Headers.Get("Content-Type"), "application/zip") ||
+			strings.Contains(r.Headers.Get("Content-Type"), "application/x-zip-compressed") {
+
 			if _, err := os.Stat(pathToDownload); os.IsNotExist(err) {
 				err = os.MkdirAll(pathToDownload, os.ModePerm)
 				if err != nil {
@@ -67,7 +69,11 @@ func DownloadMod(downloadUrl string, outputFileName string) (string, error) {
 				return
 			}
 		} else {
-			fmt.Println("Invalid content type received. Expected a zip file.")
+			clr := color.New(color.FgRed)
+			_, err := clr.Printf("Invalid content type received. Expected a zip file.")
+			if err != nil {
+				return
+			}
 		}
 	})
 
