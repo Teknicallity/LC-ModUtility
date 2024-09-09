@@ -23,6 +23,7 @@ func InstallModFromZip(zipFilePath string) error {
 	return nil
 }
 
+// Moves an unzipped mod's files to the correct location in the lethal company directory
 func moveModFiles(unzippedFolderPath string) error {
 	fileInfo, err := os.ReadDir(unzippedFolderPath)
 	if err != nil {
@@ -34,6 +35,9 @@ func moveModFiles(unzippedFolderPath string) error {
 			if file.Name() == "BepInEx" {
 				destination := "."
 				err = pathUtil.MoveDir(filepath.Join(unzippedFolderPath, "BepInEx"), destination)
+			} else if file.Name() == "BoomboxController" { // for https://thunderstore.io/c/lethal-company/p/KoderTeh/Boombox_Controller/
+				destination := "."
+				err = pathUtil.MoveDir(filepath.Join(unzippedFolderPath, "BoomboxController"), destination)
 			} else if file.Name() == "BeplnEx" { // for https://thunderstore.io/c/lethal-company/p/Humyo/THE_JESTER_MUSIC_BOX/v/1.0.0/
 				destination := "."
 				err = pathUtil.MoveDir(filepath.Join(unzippedFolderPath, "BeplnEx"), destination, "BepInEx")

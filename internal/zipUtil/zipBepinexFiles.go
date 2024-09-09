@@ -9,7 +9,7 @@ import (
 	"regexp"
 )
 
-// zipFiles zips the specified files into a single zip archive
+// zips the specified files into a single zip archive
 func zipFiles(zipFileName string, files []string) error {
 	// Create a new zip file
 	zipfile, err := os.Create(zipFileName)
@@ -133,6 +133,9 @@ func ZipBepInEx(isBackup bool) error {
 	files := []string{"winhttp.dll", "doorstop_config.ini", "BepInEx"}
 	if _, err := os.Stat("plugins.md"); err == nil {
 		files = append(files, "plugins.md") // Return the valid path
+	}
+	if _, err := os.Stat("BoomboxController"); err == nil {
+		files = append(files, "BoomboxController")
 	}
 
 	var zipFileName string
